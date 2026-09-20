@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#090b0c">
+  <meta name="description" content="A fast, mobile-friendly combat roller and battle round tracker for tabletop battles.">
+  <title>Battle Forge — 40K Combat Roller</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23090b0c'/%3E%3Cpath d='M32 7 50 17v20L32 57 14 37V17z' fill='none' stroke='%23d4aa55' stroke-width='5'/%3E%3Ccircle cx='32' cy='32' r='7' fill='%23c94938'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#roller" aria-label="Battle Forge home">
+      <span class="brand-mark" aria-hidden="true">✦</span>
+      <span>BATTLE FORGE</span>
+    </a>
+    <span class="edition">COMBAT ROLLER</span>
+  </header>
+
+  <main>
+    <section id="roller" class="roller-grid" aria-label="Combat roller">
+      <div class="panel input-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">ATTACK PROFILE</p>
+            <h1>Resolve an attack</h1>
+          </div>
+          <button class="icon-button" id="resetProfile" type="button" title="Reset profile" aria-label="Reset attack profile">↻</button>
+        </div>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Attacks</span>
+            <input id="attacks" inputmode="numeric" type="number" min="1" max="200" value="10">
+          </label>
+          <label class="field">
+            <span>Hit on</span>
+            <select id="hit"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select>
+          </label>
+          <label class="field">
+            <span>Strength</span>
+            <input id="strength" inputmode="numeric" type="number" min="1" max="30" value="5">
+          </label>
+          <label class="field">
+            <span>Toughness</span>
+            <input id="toughness" inputmode="numeric" type="number" min="1" max="30" value="4">
+          </label>
+          <label class="field">
+            <span>AP</span>
+            <input id="ap" inputmode="numeric" type="number" min="-6" max="0" value="-2">
+          </label>
+          <label class="field">
+            <span>Target save</span>
+            <select id="save"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select>
+          </label>
+          <label class="field">
+            <span>Damage</span>
+            <input id="damage" inputmode="numeric" type="number" min="1" max="20" value="2">
+          </label>
+          <label class="field">
+            <span>Invulnerable</span>
+            <select id="invuln"><option value="0" selected>None</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option><option value="5">5+</option><option value="6">6+</option></select>
+          </label>
+        </div>
+
+        <div class="abilities" aria-label="Weapon abilities">
+          <label class="ability"><input id="rerollOnes" type="checkbox"><span class="check"></span><span><strong>Re-roll 1s</strong><small>Hit rolls only</small></span></label>
+          <label class="ability"><input id="lethal" type="checkbox"><span class="check"></span><span><strong>Lethal Hits</strong><small>Critical hits auto-wound</small></span></label>
+          <label class="ability"><input id="sustained" type="checkbox"><span class="check"></span><span><strong>Sustained Hits 1</strong><small>+1 hit on a critical hit</small></span></label>
+          <label class="ability"><input id="devastating" type="checkbox"><span class="check"></span><span><strong>Devastating Wounds</strong><small>Critical wounds bypass saves</small></span></label>
+        </div>
+
+        <button id="rollCombat" class="roll-button" type="button">
+          <span class="die" aria-hidden="true">⚄</span>
+          <span>ROLL COMBAT</span>
+        </button>
+      </div>
+
+      <div class="right-stack">
+        <section class="panel results-panel" aria-labelledby="resultsTitle">
+          <div class="section-heading compact">
+            <div><p class="eyebrow">LAST ATTACK</p><h2 id="resultsTitle">Combat results</h2></div>
+            <span id="saveUsed" class="save-badge">SAVE —</span>
+          </div>
+          <div class="result-hero">
+            <div>
+              <span class="result-label">TOTAL DAMAGE</span>
+              <strong id="damageOut">—</strong>
+            </div>
+            <div class="wound-target"><span>WOUND ON</span><strong id="woundTargetOut">—</strong></div>
+          </div>
+          <div class="result-grid">
+            <div><span>Hits</span><strong id="hitsOut">—</strong></div>
+            <div><span>Wounds</span><strong id="woundsOut">—</strong></div>
+            <div><span>Failed saves</span><strong id="failsOut">—</strong></div>
+            <div><span>Devastating</span><strong id="devOut">—</strong></div>
+          </div>
+          <p id="rollLog" class="roll-log" aria-live="polite">Set your profile and roll to resolve the attack.</p>
+        </section>
+
+        <section class="panel tracker-panel" aria-labelledby="trackerTitle">
+          <div class="tracker-top">
+            <div><p class="eyebrow">BATTLE ROUND <span id="roundNo">1</span></p><h2 id="trackerTitle">Turn tracker</h2></div>
+            <button id="nextPhase" class="next-button" type="button">NEXT PHASE <span aria-hidden="true">→</span></button>
+          </div>
+          <div id="phases" class="phases" aria-label="Turn phases"></div>
+          <button id="newRound" class="text-button" type="button">Start next battle round</button>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer>Unofficial tabletop companion. Not affiliated with Games Workshop.</footer>
+  <script src="./app.js"></script>
+</body>
+</html>
