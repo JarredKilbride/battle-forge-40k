@@ -1,0 +1,11 @@
+export const phases = ['Command', 'Movement', 'Shooting', 'Charge', 'Fight'] as const;
+export type Player = { id: string; name: string; cp: number; vp: number };
+export type Profile = { name: string; attacks: number; hit: number; strength: number; toughness: number; ap: number; save: number; invuln: number; damage: number; lethal: boolean; sustained: boolean; devastating: boolean; reroll: boolean };
+export const defaultProfile: Profile = {name:'Custom weapon', attacks:10,hit:3,strength:5,toughness:4,ap:-2,save:3,invuln:0,damage:2,lethal:false,sustained:false,devastating:false,reroll:false};
+export type Dice = { faces: number[]; originals?: number[]; target: number; label: string; mode: string };
+export type Attack = { attacker: string; defender: string; profile: Profile; stage: 'hits'|'wounds'|'saves'|'damage'|'done'; dice: Dice[]; hits:number; auto:number; wounds:number; dev:number; failed:number; damage:number };
+export type Board = { status: 'lobby'|'battle'|'ended'; players: Player[]; order: string[]; turn: number; round: number; phase: number; checks: string[]; attack: Attack|null };
+export type Entry = {id: string; at: string; text: string; dice?: Dice};
+export type Game = Board & { code: string; version: number; host: string; history: Entry[]; undo: {by:string; label:string}|null; canUndo:boolean; expiresAt: number };
+export type Session = {code:string; token:string; playerId:string};
+export type Action = {type:string; [key:string]:unknown};
