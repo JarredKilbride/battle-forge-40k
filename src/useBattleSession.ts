@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { load, readGame, request, save, sendAction } from "./api";
 import { weaponProfile, type Army, type ArmyModel, type ArmyUnit, type ArmyWeapon } from "./army";
+import type { BloodHit } from "./bloodMotion";
 import type { ArmyPick, ConfirmKind, GameView } from "./components";
 import { defaultProfile, type Action, type Game, type Profile, type Session } from "./types";
 
@@ -38,6 +39,7 @@ export function useBattleSession() {
     [note, setNote] = useState(""),
     [copyState, setCopyState] = useState("Copy invite link");
   const [confirm, setConfirm] = useState<ConfirmKind | null>(null);
+  const [bloodHit, setBloodHit] = useState<BloodHit | null>(null);
   const lock = useRef(false),
     version = useRef(-1),
     pending = useRef<{ action: Action; version: number; id: string } | null>(
@@ -240,6 +242,14 @@ export function useBattleSession() {
     setArmyPick(null);
     setArmyUnit("");
   }
+  function recordWounds(
+    next: Army,
+    hit?: { unit: number; model: number },
+  ) {
+    save("bf.army", next);
+    setArmy(next);
+    if (hit) setBloodHit({ ...hit, at: Date.now() });
+  }
   function applyArmyWeapon(
     unit: ArmyUnit,
     model: ArmyModel,
@@ -309,6 +319,8 @@ export function useBattleSession() {
     copy,
     storeProfile,
     storeArmy,
+    recordWounds,
+    bloodHit,
     applyArmyWeapon,
     removeProfile,
   };

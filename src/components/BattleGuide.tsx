@@ -1,4 +1,5 @@
 import type { Army, ArmyModel, ArmyUnit, ArmyWeapon } from "../army";
+import type { BloodHit } from "../bloodMotion";
 import { phases, type Action, type Game, type Profile } from "../types";
 import type { ArmyPick } from "./ArmyAttackPicker";
 import { CombatPanel } from "./CombatPanel";
@@ -22,6 +23,9 @@ export function BattleGuide({
   onProfile,
   onArmyUnit,
   onArmyWeapon,
+  onRecordWounds,
+  blood,
+  bloodHit,
   onMode,
   onFaces,
   onAct,
@@ -43,6 +47,12 @@ export function BattleGuide({
   onProfile: (profile: Profile) => void;
   onArmyUnit: (index: string) => void;
   onArmyWeapon: (unit: ArmyUnit, model: ArmyModel, weapon: ArmyWeapon) => void;
+  onRecordWounds: (
+    army: Army,
+    hit?: { unit: number; model: number },
+  ) => void;
+  blood: boolean;
+  bloodHit: BloodHit | null;
   onMode: (mode: "digital" | "physical") => void;
   onFaces: (faces: string) => void;
   onAct: (action: Action) => void;
@@ -81,6 +91,9 @@ export function BattleGuide({
           onProfile={onProfile}
           onArmyUnit={onArmyUnit}
           onArmyWeapon={onArmyWeapon}
+          onRecordWounds={onRecordWounds}
+          blood={blood}
+          bloodHit={bloodHit}
           onMode={onMode}
           onFaces={onFaces}
           onAct={onAct}

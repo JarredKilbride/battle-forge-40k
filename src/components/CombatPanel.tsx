@@ -1,9 +1,181 @@
-import type { Army, ArmyModel, ArmyUnit, ArmyWeapon } from "../army";
-import type { Action, Game, Profile } from "../types";
+import { useRef, useState } from "react";
+import {
+  applyWoundPackets,
+  healthSummary,
+  startingWounds,
+  type Army,
+  type ArmyModel,
+  type ArmyUnit,
+  type ArmyWeapon,
+} from "../army";
+import type { Action, Attack, Dice, Game, Profile } from "../types";
+import type { BloodHit } from "../bloodMotion";
 import { ArmyAttackPicker, type ArmyPick } from "./ArmyAttackPicker";
-import { DiceRow } from "./DiceRow";
+import { BloodSplat, useBloodSplash } from "./BloodSplat";
+import { WoundBar } from "./WoundBar";
+import { DiceRow, readDiceMotion, writeDiceMotion } from "./DiceRow";
 import { Help } from "./Help";
 import { ProfileForm } from "./ProfileForm";
+
+const ATTACK_STEPS = [
+  {
+    id: "hits",
+    label: "Hits",
+    hint: "One die per attack. Meet the hit roll.",
+  },
+  {
+    id: "wounds",
+    label: "Wounds",
+    hint: "Strength against the target's Toughness.",
+  },
+  {
+    id: "saves",
+    label: "Saves",
+    hint: "Armour after AP, or an invulnerable save.",
+  },
+  {
+    id: "damage",
+    label: "Damage",
+    hint: "Failed saves become harm to allocate.",
+  },
+] as const;
+
+function countLabel(n: number, singular: string, plural = `${singular}s`) {
+  return `${n} ${n === 1 ? singular : plural}`;
+}
+
+function saveNeed(profile: Profile) {
+  const armour = profile.save - profile.ap;
+  if (profile.invuln && profile.invuln < armour) {
+    return `a ${profile.invuln}+ invulnerable save, better than ${armour}+ after AP`;
+  }
+  if (armour > 6) return "no possible save after AP";
+  if (profile.ap === 0) return `a ${profile.save}+ save`;
+  return `a ${armour}+ save (${profile.save}+ armour, AP ${profile.ap})`;
+}
+
+function saveOutcome(failed: number, stopped: number) {
+  if (failed === 0)
+    return `${countLabel(stopped, "save")} stopped the attack.`;
+  if (stopped === 0)
+    return `${countLabel(failed, "save")} failed. None were stopped.`;
+  return `${countLabel(failed, "save")} failed and ${countLabel(stopped, "save")} stopped the attack.`;
+}
+
+function DamageStory({
+  attack,
+  splash,
+}: {
+  attack: Attack;
+  splash?: boolean;
+}) {
+  const profile = attack.profile;
+  const stopped = Math.max(0, attack.wounds - attack.failed);
+  const through = attack.failed + attack.dev;
+  const hitSummary = `${profile.name} made ${countLabel(profile.attacks, "attack")} and scored ${countLabel(attack.hits, "hit")}${
+    attack.auto > 0
+      ? `, including ${countLabel(attack.auto, "lethal hit")} that skipped the wound roll`
+      : ""
+  }.`;
+  const sources = [
+    attack.failed > 0 ? countLabel(attack.failed, "failed save") : "",
+    attack.dev > 0 ? countLabel(attack.dev, "devastating wound") : "",
+  ].filter(Boolean);
+  const deal =
+    through === 0
+      ? "Nothing got through, so there is no damage to allocate."
+      : through === 1
+        ? `${sources[0]} deals ${profile.damage} damage.`
+        : `${sources.join(" and ")} each deal ${profile.damage} damage, for ${attack.damage} total.`;
+
+  return (
+    <div className="result">
+      {splash && <BloodSplat />}
+      <strong>{attack.damage}</strong>
+      <div className="result-copy">
+        <span className="result-label">damage to allocate</span>
+        <p>{hitSummary}</p>
+        <p>
+          {attack.wounds > 0
+            ? `${countLabel(attack.wounds, "wound")} reached ${saveNeed(profile)}. ${saveOutcome(attack.failed, stopped)}`
+            : attack.dev > 0
+              ? "No normal saves were rolled."
+              : "Nothing reached a save."}
+          {attack.dev > 0
+            ? ` ${countLabel(attack.dev, "devastating wound")} skipped the save.`
+            : ""}
+        </p>
+        <p>{deal}</p>
+      </div>
+    </div>
+  );
+}
+
+function CasualtyPicker({
+  army,
+  unitIndex,
+  modelIndex,
+  onUnit,
+  onModel,
+}: {
+  army: Army;
+  unitIndex: string;
+  modelIndex: string;
+  onUnit: (index: string) => void;
+  onModel: (index: string) => void;
+}) {
+  const unit = unitIndex !== "" ? army.units[Number(unitIndex)] : undefined;
+  const model = unit?.models[Number(modelIndex)] ?? unit?.models[0];
+  const fixed = model ? startingWounds(model) : null;
+  return (
+    <>
+      <label className="field">
+        Your model taking this damage
+        <select
+          value={unit ? unitIndex : ""}
+          onChange={(event) => {
+            onUnit(event.target.value);
+            onModel("0");
+          }}
+        >
+          <option value="">Don't track these wounds</option>
+          {army.units.map((entry, index) => (
+            <option key={`${entry.name}-${index}`} value={String(index)}>
+              {entry.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {unit && unit.models.length > 1 && (
+        <label className="field">
+          Model
+          <select
+            value={modelIndex}
+            onChange={(event) => onModel(event.target.value)}
+          >
+            {unit.models.map((entry, index) => (
+              <option key={`${entry.name}-${index}`} value={String(index)}>
+                {entry.name} · {healthSummary(entry)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {model && (
+        <p>
+          {fixed == null
+            ? `${model.name} lists wounds as ${model.w}, so those stay on the tabletop.`
+            : `${healthSummary(model)}. The most wounded model of this type is hurt first.`}
+          {fixed != null && <WoundBar model={model} />}
+        </p>
+      )}
+    </>
+  );
+}
+
+function diceKey(dice: Dice, index: number) {
+  return `${index}:${dice.label}:${dice.faces.join(",")}`;
+}
 
 function wound(s: number, t: number) {
   return s >= t * 2 ? 2 : s > t ? 3 : s === t ? 4 : s * 2 <= t ? 6 : 5;
@@ -24,6 +196,9 @@ export function CombatPanel({
   onProfile,
   onArmyUnit,
   onArmyWeapon,
+  onRecordWounds,
+  blood,
+  bloodHit,
   onMode,
   onFaces,
   onAct,
@@ -42,6 +217,12 @@ export function CombatPanel({
   onProfile: (profile: Profile) => void;
   onArmyUnit: (index: string) => void;
   onArmyWeapon: (unit: ArmyUnit, model: ArmyModel, weapon: ArmyWeapon) => void;
+  onRecordWounds: (
+    army: Army,
+    hit?: { unit: number; model: number },
+  ) => void;
+  blood: boolean;
+  bloodHit: BloodHit | null;
   onMode: (mode: "digital" | "physical") => void;
   onFaces: (faces: string) => void;
   onAct: (action: Action) => void;
@@ -73,6 +254,21 @@ export function CombatPanel({
     game.status === "battle" &&
     (game.phase === 4 || (game.phase === 2 && myTurn)) &&
     (!attack || attack.stage === "done");
+  const [animateRolls, setAnimateRolls] = useState(readDiceMotion);
+  const splash = useBloodSplash(bloodHit, blood);
+  const [casualtyUnit, setCasualtyUnit] = useState("");
+  const [casualtyModel, setCasualtyModel] = useState("0");
+  const knownDice = useRef<number | null>(null);
+  const freshFrom = useRef<number | null>(null);
+  const diceCount = attack?.dice.length ?? 0;
+  if (knownDice.current === null) knownDice.current = diceCount;
+  else if (diceCount > knownDice.current) {
+    freshFrom.current = knownDice.current;
+    knownDice.current = diceCount;
+  } else if (diceCount < knownDice.current) {
+    knownDice.current = diceCount;
+    freshFrom.current = null;
+  }
 
   return (
     <section className="panel combat-panel">
@@ -84,12 +280,7 @@ export function CombatPanel({
       </h2>
       {!attack || attack.stage === "done" ? (
         <>
-          {attack && (
-            <div className="result">
-              <strong>{attack.damage}</strong>
-              <span>potential damage · previous attack</span>
-            </div>
-          )}
+          {attack && <DamageStory attack={attack} splash={splash} />}
           {game.status === "ended" ? (
             <p>Your final results are saved in action history.</p>
           ) : canStart ? (
@@ -164,9 +355,13 @@ export function CombatPanel({
       ) : (
         <>
           <div className="attack-steps">
-            {["hits", "wounds", "saves", "damage"].map((s) => (
-              <span key={s} className={attack.stage === s ? "selected" : ""}>
-                {s}
+            {ATTACK_STEPS.map((step) => (
+              <span
+                key={step.id}
+                className={attack.stage === step.id ? "selected" : ""}
+              >
+                {step.label}
+                <small>{step.hint}</small>
               </span>
             ))}
           </div>
@@ -178,24 +373,47 @@ export function CombatPanel({
           </p>
           {attack.stage === "damage" ? (
             <>
-              <div className="result">
-                <strong>{attack.damage}</strong>
-                <span>
-                  potential damage
-                  <br />
-                  {attack.failed} failed saves · {attack.dev} devastating wounds
-                </span>
-              </div>
+              <DamageStory attack={attack} splash={splash} />
               <p>
-                Allocate damage per attack. Excess damage on one model does not
-                spill over. Apply defensive abilities manually.
+                Allocate each unsaved attack to one of your models. Extra
+                damage on that model does not move to the next. Apply defensive
+                abilities manually.
               </p>
+              {actor === meId && army && (
+                <CasualtyPicker
+                  army={army}
+                  unitIndex={casualtyUnit}
+                  modelIndex={casualtyModel}
+                  onUnit={setCasualtyUnit}
+                  onModel={setCasualtyModel}
+                />
+              )}
               <button
                 className="primary"
                 disabled={disabled || actor !== meId || !!game.undo}
-                onClick={() => onAct({ type: "damage" })}
+                onClick={() => {
+                  const packets = attack.failed + attack.dev;
+                  if (army && casualtyUnit !== "" && packets > 0) {
+                    const next = applyWoundPackets(
+                      army,
+                      Number(casualtyUnit),
+                      Number(casualtyModel),
+                      packets,
+                      attack.profile.damage,
+                    );
+                    if (next.applied > 0) {
+                      onRecordWounds(next.army, {
+                        unit: Number(casualtyUnit),
+                        model: Number(casualtyModel),
+                      });
+                    } else onRecordWounds(next.army);
+                  }
+                  onAct({ type: "damage" });
+                }}
               >
-                Damage applied · finish attack
+                {casualtyUnit !== ""
+                  ? "Assign wounds · finish attack"
+                  : "Damage applied · finish attack"}
               </button>
             </>
           ) : (
@@ -291,8 +509,27 @@ export function CombatPanel({
               </Help>
             </>
           )}
+          <label className="animate-toggle">
+            <input
+              type="checkbox"
+              checked={animateRolls}
+              onChange={(e) => {
+                setAnimateRolls(e.target.checked);
+                writeDiceMotion(e.target.checked);
+              }}
+            />
+            Animate digital rolls
+          </label>
           {attack.dice.map((d, i) => (
-            <DiceRow key={i} dice={d} />
+            <DiceRow
+              key={diceKey(d, i)}
+              dice={d}
+              animate={
+                animateRolls &&
+                freshFrom.current !== null &&
+                i >= freshFrom.current
+              }
+            />
           ))}
         </>
       )}

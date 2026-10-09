@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
-import { ArmyImportError, parseArmy, parseArmyJson, weaponNeedsReview, weaponProfile } from '../src/army.ts';
+import { applyWoundPackets, ArmyImportError, healthSummary, parseArmy, parseArmyJson, weaponNeedsReview, weaponProfile, type Army } from '../src/army.ts';
 
 const sistersPath = '/Users/jarredkilbride/Downloads/Sisters.json';
 
@@ -60,6 +60,39 @@ test('a roster parses a unit, keeps the standing 4+ invulnerable, and skips conf
   const bare = parseArmy(sampleRoster().roster);
   assert.equal(bare.name, 'Test');
   assert.equal(bare.units[0].name, 'Retributor Squad');
+});
+
+test('wound packets finish a damaged model and do not spill', () => {
+  const army: Army = {
+    name: 'Test',
+    faction: '',
+    points: 0,
+    limit: 0,
+    units: [{
+      name: 'Squad',
+      points: 0,
+      models: [{
+        name: 'Marine',
+        count: 2,
+        m: '6"',
+        t: '4',
+        sv: '3+',
+        w: '2',
+        ld: '6+',
+        oc: '2',
+        invuln: null,
+        weapons: [],
+      }],
+    }],
+  };
+  assert.equal(healthSummary(army.units[0].models[0]), 'W 2 each');
+  const first = applyWoundPackets(army, 0, 0, 1, 3);
+  assert.deepEqual(first.army.units[0].models[0].remaining, [0, 2]);
+  assert.equal(first.destroyed, 1);
+  assert.equal(first.lost, 0);
+  const second = applyWoundPackets(first.army, 0, 0, 1, 1);
+  assert.deepEqual(second.army.units[0].models[0].remaining, [0, 1]);
+  assert.equal(healthSummary(second.army.units[0].models[0]), '1 at 1W · 1 destroyed');
 });
 
 test('parses Sisters.json when the sample roster is present', { skip: !existsSync(sistersPath) }, () => {

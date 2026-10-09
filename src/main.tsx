@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { ArmyPanel } from "./ArmyPanel";
 import {
@@ -11,11 +12,13 @@ import {
   TopBar,
   Welcome,
 } from "./components";
+import { readBloodMotion, writeBloodMotion } from "./bloodMotion";
 import { rulesUrl } from "./guidance";
 import { useBattleSession } from "./useBattleSession";
 import "./style.css";
 
 function App() {
+  const [blood, setBlood] = useState(readBloodMotion);
   const {
     session,
     game,
@@ -62,6 +65,8 @@ function App() {
     copy,
     storeProfile,
     storeArmy,
+    recordWounds,
+    bloodHit,
     applyArmyWeapon,
     removeProfile,
   } = useBattleSession();
@@ -71,6 +76,11 @@ function App() {
         connected={!!session}
         online={online}
         lastSync={lastSync}
+        blood={blood}
+        onBlood={(enabled) => {
+          setBlood(enabled);
+          writeBloodMotion(enabled);
+        }}
         onHome={() => setView("battle")}
       />
       <main>
@@ -167,6 +177,9 @@ function App() {
                 onArmyWeapon={(unit, model, weapon) =>
                   applyArmyWeapon(unit, model, weapon, false)
                 }
+                onRecordWounds={recordWounds}
+                blood={blood}
+                bloodHit={bloodHit}
                 onMode={setMode}
                 onFaces={setFaces}
                 onAct={act}
@@ -175,6 +188,8 @@ function App() {
             {view === "army" && (
               <ArmyPanel
                 army={army}
+                blood={blood}
+                bloodHit={bloodHit}
                 onArmy={storeArmy}
                 onUseWeapon={(unit, model, weapon) =>
                   applyArmyWeapon(unit, model, weapon, true)

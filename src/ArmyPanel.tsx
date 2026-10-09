@@ -1,19 +1,27 @@
 import { useState } from "react";
 import { save } from "./api";
 import type { Army, ArmyModel, ArmyUnit, ArmyWeapon } from "./army";
-import { parseArmyJson } from "./army";
+import type { BloodHit } from "./bloodMotion";
+import { healthSummary, parseArmyJson } from "./army";
+import { BloodSplat, useBloodSplash } from "./components/BloodSplat";
+import { WoundBar } from "./components/WoundBar";
 
 export function ArmyPanel({
   army,
+  blood = false,
+  bloodHit = null,
   onArmy,
   onUseWeapon,
   compact = false,
 }: {
   army: Army | null;
+  blood?: boolean;
+  bloodHit?: BloodHit | null;
   onArmy: (army: Army | null) => void;
   onUseWeapon?: (unit: ArmyUnit, model: ArmyModel, weapon: ArmyWeapon) => void;
   compact?: boolean;
 }) {
+  const splash = useBloodSplash(bloodHit, blood);
   const [paste, setPaste] = useState("");
   const [error, setError] = useState("");
 
@@ -55,7 +63,14 @@ export function ArmyPanel({
       sum + unit.models.reduce((models, model) => models + model.count, 0),
     0,
   );
-  const list = <ArmyList army={army} units={units} onUseWeapon={onUseWeapon} />;
+  const list = (
+    <ArmyList
+      army={army}
+      units={units}
+      onUseWeapon={onUseWeapon}
+      splash={splash ? bloodHit : null}
+    />
+  );
 
   return (
     <section
@@ -139,10 +154,12 @@ function ArmyList({
   army,
   units,
   onUseWeapon,
+  splash,
 }: {
   army: Army | null;
   units: ArmyUnit[];
   onUseWeapon?: (unit: ArmyUnit, model: ArmyModel, weapon: ArmyWeapon) => void;
+  splash: BloodHit | null;
 }) {
   if (!army) return null;
   return (
@@ -154,15 +171,19 @@ function ArmyList({
           <div className="army-models">
             {unit.models.map((model, modelIndex) => (
               <div className="army-model" key={`${model.name}-${modelIndex}`}>
+                {splash?.unit === unitIndex && splash.model === modelIndex && (
+                  <BloodSplat />
+                )}
                 <strong>
                   {model.name}
                   {model.count > 1 ? ` ×${model.count}` : ""}
                 </strong>
+                <WoundBar model={model} />
                 <div className="army-stats">
                   <span>M {model.m}</span>
                   <span>T {model.t}</span>
                   <span>SV {model.sv}</span>
-                  <span>W {model.w}</span>
+                  <span>{healthSummary(model)}</span>
                   <span>
                     Invuln {model.invuln ? `${model.invuln}+` : "none"}
                   </span>

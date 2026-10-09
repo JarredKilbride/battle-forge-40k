@@ -2,11 +2,15 @@ export function TopBar({
   connected,
   online,
   lastSync,
+  blood,
+  onBlood,
   onHome,
 }: {
   connected: boolean;
   online: boolean;
   lastSync: number;
+  blood: boolean;
+  onBlood: (enabled: boolean) => void;
   onHome: () => void;
 }) {
   return (
@@ -24,7 +28,16 @@ export function TopBar({
           BATTLE FORGE<small>TABLETOP COMPANION</small>
         </span>
       </a>
-      <div className="connection">
+      <div className="top-actions">
+        <label className="blood-toggle">
+          <input
+            type="checkbox"
+            checked={blood}
+            onChange={(event) => onBlood(event.target.checked)}
+          />
+          Blood
+        </label>
+        <div className="connection">
         {connected ? (
           <>
             <span className={online ? "lamp" : "lamp offline"} />
@@ -38,6 +51,7 @@ export function TopBar({
         ) : (
           <span>1 v 1 · 11TH EDITION GUIDE</span>
         )}
+        </div>
       </div>
     </header>
   );

@@ -1,3 +1,70 @@
+# Execution flow: attack step hints
+_Last updated: 2026-10-09, branch `main`_
+
+## Entry points
+- UI combat, while an attack is in progress: `ATTACK_STEPS` (`src/components/CombatPanel.tsx:9`) rendered in the step strip (`src/components/CombatPanel.tsx:206`)
+
+## Execution order
+1. The strip maps Hits, Wounds, Saves, and Damage.
+2. Each cell shows `step.label` and, under it, `step.hint` (`src/components/CombatPanel.tsx:213`).
+3. The cell whose `id` matches `attack.stage` gets `selected`.
+4. The collapsed “Explain this roll” help (`src/components/CombatPanel.tsx:328`) still shows the wound chart for the current step. The hint does not change the roll.
+
+## Call graph
+```
+CombatPanel attack strip          (src/components/CombatPanel.tsx:206)
+ └─ ATTACK_STEPS                   (src/components/CombatPanel.tsx:9)
+```
+
+## Data touched
+- None. The hints are display copy.
+
+## AI-changed in this session (2026-10-09, step hints)
+| File | Function / area | Change | Why (→ D-<n>) |
+|---|---|---|---|
+| `src/components/CombatPanel.tsx` | `ATTACK_STEPS` | Short line under each step name | D-5 |
+| `src/style.css` | `.attack-steps small` | Hint sits under the label, not in all caps | D-5 |
+| `DECISIONS.md` | D-5 | Logged visible hints | D-5 |
+| `FLOW.md` | this section | Logged the strip | D-5 |
+
+# Execution flow: digital dice animation
+_Last updated: 2026-10-09, branch `main`_
+
+## Entry points
+- UI combat, after a digital roll is on the attack: `DiceRow` (`src/components/DiceRow.tsx:28`) mounted from `CombatPanel` (`src/components/CombatPanel.tsx:349`)
+- Checkbox **Animate digital rolls** (`src/components/CombatPanel.tsx:338`) writes `bf.dice-motion`
+
+## Execution order
+1. The roller sends `{type:'roll', mode:'digital'}`. The server still rolls and returns real faces. This path does not change that.
+2. `CombatPanel` compares `attack.dice.length` to the count it already rendered (`src/components/CombatPanel.tsx:108`). A longer list marks those new rows as fresh. A shorter list (new attack) clears that mark. Dice already present on first paint are not fresh.
+3. Each fresh row with `mode === "digital"` and the checkbox on mounts `DiceRow` with `animate` (`src/components/DiceRow.tsx:35`).
+4. One interval (`src/components/DiceRow.tsx:41`) advances a tick. Faces show tumbling pips, then each die settles on `dice.faces[i]` after a short stagger (`src/components/DiceRow.tsx:62`). The grid is padded (`src/style.css` `.dice-grid`) so the lift and rotation stay inside the scrollport.
+5. Unchecking the box sets `animate` false, the interval stops, and the real faces show at once (`src/components/DiceRow.tsx:39`, `src/components/DiceRow.tsx:62`). The value is saved with `writeDiceMotion` (`src/components/DiceRow.tsx:24`).
+6. History renders `DiceRow` without `animate` (`src/components/HistoryView.tsx:68`). Physical dice never tumble.
+
+## Call graph
+```
+CombatPanel                         (src/components/CombatPanel.tsx:104)
+ ├─ readDiceMotion                  (src/components/DiceRow.tsx:18)
+ │   └─ load('bf.dice-motion')      (src/api.ts:37)
+ ├─ writeDiceMotion                 (src/components/DiceRow.tsx:24)
+ │   └─ save('bf.dice-motion')      (src/api.ts:44)
+ └─ DiceRow                         (src/components/DiceRow.tsx:28)
+```
+
+## Data touched
+- `localStorage` key `bf.dice-motion`: read on combat mount, written when the checkbox changes. Boolean. Not sent to the game.
+- Game dice faces: read only. The roll action is unchanged.
+
+## AI-changed in this session (2026-10-09, dice animation)
+| File | Function / area | Change | Why (→ D-<n>) |
+|---|---|---|---|
+| `src/components/DiceRow.tsx` | pip faces, tumble | Digital rows tumble, then show server faces | D-4 |
+| `src/components/CombatPanel.tsx` | fresh-dice mark, checkbox | Only new digital rows animate; switch persists | D-4 |
+| `src/style.css` | `.die`, `.animate-toggle` | Pip dice and tumble motion | D-4 |
+| `DECISIONS.md` | D-4 | Logged client-only motion | D-4 |
+| `FLOW.md` | this section | Logged the tumble path | D-4 |
+
 # Execution flow: solo local start
 _Last updated: 2026-10-09, branch `main`_
 

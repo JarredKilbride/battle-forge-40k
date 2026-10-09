@@ -25,6 +25,7 @@ export type ArmyModel = {
   oc: string;
   invuln: number | null;
   weapons: ArmyWeapon[];
+  remaining?: number[];
 };
 
 export type ArmyUnit = {
@@ -393,6 +394,82 @@ function asArray(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
   if (value == null) return [];
   return [value];
+}
+
+export function startingWounds(model: ArmyModel): number | null {
+  if (!/^\d+$/.test(model.w.trim())) return null;
+  const value = Number(model.w);
+  return value >= 1 && value <= 100 ? value : null;
+}
+
+export function currentWounds(model: ArmyModel): number[] | null {
+  const full = startingWounds(model);
+  if (full == null) return null;
+  if (model.remaining?.length === model.count) return model.remaining;
+  return Array.from({ length: model.count }, () => full);
+}
+
+export function healthSummary(model: ArmyModel): string {
+  const full = startingWounds(model);
+  const remaining = currentWounds(model);
+  if (full == null || !remaining) return `W ${model.w}`;
+  const alive = new Map<number, number>();
+  let dead = 0;
+  for (const wounds of remaining) {
+    if (wounds <= 0) dead += 1;
+    else alive.set(wounds, (alive.get(wounds) ?? 0) + 1);
+  }
+  if (dead === 0 && alive.size === 1 && alive.has(full)) {
+    return model.count > 1 ? `W ${full} each` : `W ${full}`;
+  }
+  const parts = [...alive.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([wounds, count]) => `${count} at ${wounds}W`);
+  if (dead) parts.push(`${dead} destroyed`);
+  return parts.join(" · ");
+}
+
+export function applyWoundPackets(
+  army: Army,
+  unitIndex: number,
+  modelIndex: number,
+  packets: number,
+  damageEach: number,
+): { army: Army; applied: number; lost: number; destroyed: number } {
+  const unit = army.units[unitIndex];
+  const model = unit?.models[modelIndex];
+  const current = model ? currentWounds(model) : null;
+  if (!unit || !model || !current || packets < 1 || damageEach < 1) {
+    return { army, applied: 0, lost: Math.max(0, packets), destroyed: 0 };
+  }
+  const remaining = [...current];
+  let applied = 0;
+  let lost = 0;
+  let destroyed = 0;
+  for (let packet = 0; packet < packets; packet += 1) {
+    let index = -1;
+    let lowest = Infinity;
+    remaining.forEach((wounds, woundIndex) => {
+      if (wounds > 0 && wounds < lowest) {
+        lowest = wounds;
+        index = woundIndex;
+      }
+    });
+    if (index < 0) {
+      lost += 1;
+      continue;
+    }
+    if (remaining[index] - damageEach <= 0) destroyed += 1;
+    remaining[index] = Math.max(0, remaining[index] - damageEach);
+    applied += 1;
+  }
+  const models = unit.models.map((entry, index) =>
+    index === modelIndex ? { ...entry, remaining } : entry,
+  );
+  const units = army.units.map((entry, index) =>
+    index === unitIndex ? { ...entry, models } : entry,
+  );
+  return { army: { ...army, units }, applied, lost, destroyed };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
