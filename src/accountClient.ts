@@ -74,6 +74,18 @@ async function accountResult(body: Record<string, unknown>): Promise<AccountResu
   return { email: data.email, token: data.token, army: data.army ?? null, armies };
 }
 
+export async function dropAccountArmy(name: string) {
+  const session = readAccount();
+  if (!session) return null;
+  const data = await accountRequest(
+    { op: "drop", email: session.email, name },
+    session.token,
+  );
+  const armies = armiesFrom(data.armies);
+  if (Array.isArray(data.armies)) writeArmyLibrary(armies);
+  return armies;
+}
+
 export async function saveAccountArmy(army: Army | null) {
   const session = readAccount();
   if (!session) return;

@@ -366,6 +366,18 @@ main {
 .army-choice small {
   color: var(--muted);
 }
+.army-delete {
+  justify-self: start;
+  margin-top: 4px;
+}
+.army-delete-confirm {
+  display: grid;
+  gap: 10px;
+}
+.army-delete-confirm p {
+  margin: 0;
+  color: var(--muted);
+}
 .lobby > .primary {
   width: 100%;
   margin-top: 24px;

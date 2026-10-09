@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { saveAccountArmy } from "./accountClient";
-import { readArmyLibrary, upsertArmy, writeArmyLibrary } from "./armyLibrary";
+import { dropAccountArmy, saveAccountArmy } from "./accountClient";
+import { readArmyLibrary, removeArmy, upsertArmy, writeArmyLibrary } from "./armyLibrary";
 import { load, readGame, request, save, sendAction } from "./api";
 import { weaponProfile, type Army, type ArmyModel, type ArmyUnit, type ArmyWeapon } from "./army";
 import type { BloodHit } from "./bloodMotion";
@@ -259,6 +259,28 @@ export function useBattleSession() {
     writeArmyLibrary(list);
     setArmies(list);
   }
+  function deleteArmy(name: string) {
+    const key = name.trim().toLowerCase();
+    const next = removeArmy(name);
+    setArmies(next);
+    if (army?.name.trim().toLowerCase() === key) {
+      localStorage.removeItem("bf.army");
+      setArmy(null);
+      setArmyPick(null);
+      setArmyUnit("");
+    }
+    void dropAccountArmy(name)
+      .then((saved) => {
+        if (saved) setArmies(saved);
+      })
+      .catch((caught) => {
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "The army was removed on this browser. It could not be removed from your account.",
+        );
+      });
+  }
   function selectArmy(name: string) {
     if (!name) {
       storeArmy(null);
@@ -324,6 +346,7 @@ export function useBattleSession() {
     army,
     armies,
     selectArmy,
+    deleteArmy,
     replaceArmies,
     armyPick,
     armyUnit,

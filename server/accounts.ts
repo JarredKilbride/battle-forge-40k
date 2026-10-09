@@ -120,6 +120,18 @@ function libraryOf(record: { army: unknown; armies?: unknown }) {
   }
 }
 
+function armyName(value: unknown) {
+  if (!value || typeof value !== "object") return "";
+  return String((value as { name?: unknown }).name ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+function dropNamed(list: unknown[], name: string) {
+  const key = name.trim().toLowerCase();
+  return list.filter((item) => armyName(item) !== key);
+}
+
 function keepArmy(list: unknown[], army: unknown) {
   if (!army || typeof army !== "object") return list;
   const name = String((army as { name?: unknown }).name ?? "")
@@ -294,6 +306,16 @@ export function createAccountHandler(store: AccountStore) {
       if (body.op === "save") {
         const army = validateArmy(body.army);
         const armies = army ? keepArmy(libraryOf(found.data), army) : libraryOf(found.data);
+        const next = { ...found.data, army, armies, updatedAt: Date.now() };
+        await writeAccount(store, key, found, next);
+        return json({ email, army, armies });
+      }
+
+      if (body.op === "drop") {
+        const name = typeof body.name === "string" ? body.name.trim() : "";
+        ensure(name.length > 0 && name.length <= 80, "Name the army to delete.");
+        const armies = dropNamed(libraryOf(found.data), name);
+        const army = armyName(found.data.army) === name.toLowerCase() ? null : found.data.army;
         const next = { ...found.data, army, armies, updatedAt: Date.now() };
         await writeAccount(store, key, found, next);
         return json({ email, army, armies });

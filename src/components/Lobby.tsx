@@ -22,6 +22,7 @@ export function Lobby({
   onLeave,
   onArmy,
   onSelectArmy,
+  onDeleteArmy,
 }: {
   game: Game;
   meId: string | undefined;
@@ -40,6 +41,7 @@ export function Lobby({
   onLeave: () => void;
   onArmy: (army: Army | null) => void;
   onSelectArmy: (name: string) => void;
+  onDeleteArmy: (name: string) => void;
 }) {
   const me = game.players.find((p) => p.id === meId);
   return (
@@ -74,7 +76,12 @@ export function Lobby({
           <div className="player empty">Waiting for your opponent…</div>
         )}
       </div>
-      <ArmyChoice army={army} armies={armies} onSelect={onSelectArmy} />
+      <ArmyChoice
+        army={army}
+        armies={armies}
+        onSelect={onSelectArmy}
+        onDelete={onDeleteArmy}
+      />
       <ArmyPanel compact army={army} onArmy={onArmy} />
       {isHost ? (
         <>

@@ -10,6 +10,7 @@ export function Welcome({
   onName,
   onCode,
   onSelectArmy,
+  onDeleteArmy,
   onCreate,
   onJoin,
 }: {
@@ -21,6 +22,7 @@ export function Welcome({
   onName: (name: string) => void;
   onCode: (code: string) => void;
   onSelectArmy: (name: string) => void;
+  onDeleteArmy: (name: string) => void;
   onCreate: () => void;
   onJoin: () => void;
 }) {
@@ -56,7 +58,12 @@ export function Welcome({
             onChange={(e) => onName(e.target.value)}
           />
         </label>
-        <ArmyChoice army={army} armies={armies} onSelect={onSelectArmy} />
+        <ArmyChoice
+          army={army}
+          armies={armies}
+          onSelect={onSelectArmy}
+          onDelete={onDeleteArmy}
+        />
         <button
           className="primary"
           disabled={busy || !name.trim()}

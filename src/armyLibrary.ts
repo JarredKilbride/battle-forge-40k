@@ -19,6 +19,13 @@ export function writeArmyLibrary(armies: Army[]) {
   save(LIBRARY_KEY, armies.filter(isArmy).slice(-20));
 }
 
+export function removeArmy(name: string): Army[] {
+  const key = name.trim().toLowerCase();
+  const next = readArmyLibrary().filter((entry) => entry.name.trim().toLowerCase() !== key);
+  writeArmyLibrary(next);
+  return next;
+}
+
 export function upsertArmy(army: Army): Army[] {
   const name = army.name.trim().toLowerCase();
   const next = [

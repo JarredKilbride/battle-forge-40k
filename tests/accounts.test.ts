@@ -199,6 +199,32 @@ test("a second roster stays beside the first", async () => {
   );
 });
 
+test("dropping a roster leaves the other one selected", async () => {
+  const handler = createAccountHandler(memoryStore());
+  const created = await post(handler, {
+    op: "register",
+    email: "drop@b.co",
+    password: "tabletop-1",
+  });
+  const { token, email } = (await created.json()) as { token: string; email: string };
+  await post(handler, { op: "save", email, army }, token);
+  const second = { ...army, name: "Second host", points: 500 };
+  await post(handler, { op: "save", email, army: second }, token);
+  const dropped = await post(handler, { op: "drop", email, name: "Sisters" }, token);
+  const body = (await dropped.json()) as { army: { name: string }; armies: { name: string }[] };
+  assert.equal(dropped.status, 200);
+  assert.equal(body.army.name, "Second host");
+  assert.deepEqual(
+    body.armies.map((entry) => entry.name),
+    ["Second host"],
+  );
+  const cleared = await post(handler, { op: "drop", email, name: "Second host" }, token);
+  const empty = (await cleared.json()) as { army: unknown; armies: unknown[] };
+  assert.equal(cleared.status, 200);
+  assert.equal(empty.army, null);
+  assert.deepEqual(empty.armies, []);
+});
+
 test("sign out removes that session", async () => {
   const handler = createAccountHandler(memoryStore());
   const created = await post(handler, {

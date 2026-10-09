@@ -23,6 +23,7 @@ export function SettingsPage({
   onUseSaved,
   onKeepDevice,
   onSelectArmy,
+  onDeleteArmy,
   onArmy,
 }: {
   account: AccountSession | null;
@@ -36,6 +37,7 @@ export function SettingsPage({
   onUseSaved: () => void;
   onKeepDevice: () => void;
   onSelectArmy: (name: string) => void;
+  onDeleteArmy: (name: string) => void;
   onArmy: (army: Army) => void;
 }) {
   const [email, setEmail] = useState(account?.email ?? "");
@@ -83,7 +85,12 @@ export function SettingsPage({
           <p>
             Signed in as <strong>{account.email}</strong>. {armyLabel}
           </p>
-          <ArmyChoice army={army} armies={armies} onSelect={onSelectArmy} />
+          <ArmyChoice
+            army={army}
+            armies={armies}
+            onSelect={onSelectArmy}
+            onDelete={onDeleteArmy}
+          />
           <ArmyImport onArmy={onArmy} />
           <div className="settings-block">
             <h3>Password</h3>
@@ -181,7 +188,12 @@ export function SettingsPage({
             Sign in to keep your imported armies with your account. Battles stay
             on this browser either way.
           </p>
-          <ArmyChoice army={army} armies={armies} onSelect={onSelectArmy} />
+          <ArmyChoice
+            army={army}
+            armies={armies}
+            onSelect={onSelectArmy}
+            onDelete={onDeleteArmy}
+          />
           <ArmyImport onArmy={onArmy} />
           <label className="field">
             Email

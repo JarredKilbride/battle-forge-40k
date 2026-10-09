@@ -52,6 +52,7 @@ function App() {
     army,
     armies,
     selectArmy,
+    deleteArmy,
     replaceArmies,
     armyPick,
     armyUnit,
@@ -157,6 +158,7 @@ function App() {
               setSavedArmy(null);
             }}
             onSelectArmy={selectArmy}
+            onDeleteArmy={deleteArmy}
             onArmy={storeArmy}
             onKeepDevice={() => {
               if (army) {
@@ -179,6 +181,7 @@ function App() {
             onName={setName}
             onCode={setCode}
             onSelectArmy={selectArmy}
+            onDeleteArmy={deleteArmy}
             onCreate={() => enter("create")}
             onJoin={() => enter("join")}
           />
@@ -217,6 +220,7 @@ function App() {
             onLeave={() => setConfirm("leave")}
             onArmy={storeArmy}
             onSelectArmy={selectArmy}
+            onDeleteArmy={deleteArmy}
           />
         ) : (
           <GameShell
