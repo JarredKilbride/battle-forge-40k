@@ -4,3 +4,26 @@
 @media(max-width:950px){.welcome{grid-template-columns:1fr 1fr;gap:30px}.score{flex-wrap:wrap;gap:14px}.score>div:first-child{flex-basis:100%}.battle-grid{grid-template-columns:1fr 1fr;gap:15px}.panel{padding:22px}.abilities{grid-template-columns:1fr}}
 @media(max-width:680px){.topbar{padding:0 16px;height:74px}.brand{font-size:1.2rem;gap:8px}.sigil{font-size:1.5rem}.connection{font-size:.7rem;max-width:120px}.connection small{font-size:.65rem}main{padding:24px 14px}.welcome{display:flex;flex-direction:column;gap:30px;align-items:stretch;min-height:0}.intro h1{font-size:3.5rem}.intro>p:not(.eyebrow){font-size:1rem}.intro-steps{display:none}.battle-grid{grid-template-columns:1fr}.scoreboard{gap:10px}.score{padding:14px;gap:8px}.counter{grid-template-columns:26px 26px 26px}.counter button{min-height:40px}.battle-heading{align-items:flex-start}.battle-heading h1{font-size:2.5rem;overflow-wrap:anywhere}.your-turn{font-size:.6rem;padding:8px;white-space:normal;max-width:90px}.phase-strip{gap:4px}.phase-strip li{font-size:.78rem;padding:12px 3px;text-align:center;letter-spacing:0}.phase-strip span{display:block;margin:0 0 6px}.tabs{gap:0}.tabs button{flex:1;padding:12px 6px;font-size:.8rem}.invite{gap:16px;padding:16px;grid-template-columns:1fr}.qr{width:max-content;margin:auto}.players{grid-template-columns:1fr}.section-head{align-items:flex-start;flex-wrap:wrap}.note-form{display:block}.note-form button{margin-top:12px}.game-footer span{margin-left:0}.history li{grid-template-columns:50px 1fr;gap:10px}.abilities{grid-template-columns:1fr 1fr}.room-code{font-size:1.6rem}.modal h2{font-size:1.8rem}}
 @media(prefers-reduced-motion:no-preference){button{transition:background .15s,border-color .15s}.panel{animation:appear .25s ease-out}@keyframes appear{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:none}}}
+
+.army-panel{display:grid;gap:14px}
+.army-compact{margin:8px 0 18px;padding-top:8px;border-top:1px solid #4a303a}
+.army-meta{display:flex;flex-wrap:wrap;gap:8px 18px;color:#e7d3bc;font-size:.9rem}
+.army-meta strong{color:#f4e3c4}
+.army-error{margin:0;border:1px solid #b94b61;background:#33121c;padding:12px 14px;color:#f6d5dc}
+.army-import{display:grid;gap:12px}
+.army-import .actions{justify-content:flex-start;flex-wrap:wrap}
+.army-units{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:12px}
+.army-unit{border:1px solid #62403d;background:#120c10e6;padding:14px 16px}
+.army-unit h3{font-size:1.45rem}
+.army-unit>p{margin:6px 0 0}
+.army-models{display:grid;gap:12px;margin-top:10px}
+.army-model{border-top:1px solid #4b3338;padding-top:12px}
+.army-stats{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.army-stats span{background:#0c090b;border:1px solid #654b44;padding:4px 8px;font-size:.8rem;color:#f3e7d2}
+.army-weapons{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.army-weapon{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:8px 0;border-bottom:1px solid #3d2a30}
+.army-weapon p{margin:4px 0 0;font-size:.82rem}
+.army-pick{display:grid;gap:12px;margin:4px 0 16px}
+.army-notes{margin:0;padding-left:18px;color:#e7c9a4;font-size:.85rem}
+.army-notes li{margin:4px 0}
+@media(max-width:680px){.army-weapon{grid-template-columns:1fr}.army-weapon button{width:100%}.army-stats span{flex:1 1 auto}}
