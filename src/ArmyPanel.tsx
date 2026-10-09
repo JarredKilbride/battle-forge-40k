@@ -10,6 +10,7 @@ export function ArmyPanel({
   army,
   blood = false,
   bloodHit = null,
+  accountEmail = null,
   onArmy,
   onUseWeapon,
   compact = false,
@@ -17,6 +18,7 @@ export function ArmyPanel({
   army: Army | null;
   blood?: boolean;
   bloodHit?: BloodHit | null;
+  accountEmail?: string | null;
   onArmy: (army: Army | null) => void;
   onUseWeapon?: (unit: ArmyUnit, model: ArmyModel, weapon: ArmyWeapon) => void;
   compact?: boolean;
@@ -76,7 +78,12 @@ export function ArmyPanel({
     <section
       className={compact ? "army-panel army-compact" : "panel army-panel"}
     >
-      {!compact && <p className="eyebrow">YOUR DEVICE · IMPORTED ROSTER</p>}
+      {!compact && (
+        <p className="eyebrow">
+          {accountEmail ? "YOUR ACCOUNT · IMPORTED ROSTER" : "YOUR DEVICE · IMPORTED ROSTER"}
+        </p>
+      )}
+      {accountEmail && !compact && <p>Saved to {accountEmail}.</p>}
       <h2>{army ? army.name : "Import a roster"}</h2>
       {army ? (
         <div className="army-meta">
@@ -90,8 +97,9 @@ export function ArmyPanel({
         </div>
       ) : (
         <p>
-          Import a New Recruit or BattleScribe roster JSON. It stays on this
-          browser.
+          {accountEmail
+            ? "Import a New Recruit or BattleScribe roster JSON. It is saved to your account and this browser."
+            : "Import a New Recruit or BattleScribe roster JSON. It stays on this browser until you sign in."}
         </p>
       )}
       {error && (

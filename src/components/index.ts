@@ -1,3 +1,4 @@
+export { AccountDialog } from "./AccountDialog";
 export { ArmyAttackPicker, type ArmyPick } from "./ArmyAttackPicker";
 export { BattleGuide } from "./BattleGuide";
 export { BloodSplat, useBloodSplash } from "./BloodSplat";

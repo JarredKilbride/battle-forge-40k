@@ -2,5 +2,6 @@ node_modules/
 dist/
 .netlify/
 .local-games/
+.local-accounts/
 .env
 *.log

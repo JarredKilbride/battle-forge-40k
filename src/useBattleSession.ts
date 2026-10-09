@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { saveAccountArmy } from "./accountClient";
 import { load, readGame, request, save, sendAction } from "./api";
 import { weaponProfile, type Army, type ArmyModel, type ArmyUnit, type ArmyWeapon } from "./army";
 import type { BloodHit } from "./bloodMotion";
@@ -237,7 +238,19 @@ export function useBattleSession() {
       setError((e as Error).message);
     }
   }
+  function persistArmy(next: Army | null) {
+    if (next) save("bf.army", next);
+    else localStorage.removeItem("bf.army");
+    void saveAccountArmy(next).catch((caught) => {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Your army is saved on this browser. It could not be saved to your account.",
+      );
+    });
+  }
   function storeArmy(next: Army | null) {
+    persistArmy(next);
     setArmy(next);
     setArmyPick(null);
     setArmyUnit("");
@@ -246,7 +259,7 @@ export function useBattleSession() {
     next: Army,
     hit?: { unit: number; model: number },
   ) {
-    save("bf.army", next);
+    persistArmy(next);
     setArmy(next);
     if (hit) setBloodHit({ ...hit, at: Date.now() });
   }

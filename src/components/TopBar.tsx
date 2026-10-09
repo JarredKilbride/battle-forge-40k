@@ -3,14 +3,18 @@ export function TopBar({
   online,
   lastSync,
   blood,
+  accountLabel,
   onBlood,
+  onAccount,
   onHome,
 }: {
   connected: boolean;
   online: boolean;
   lastSync: number;
   blood: boolean;
+  accountLabel: string;
   onBlood: (enabled: boolean) => void;
+  onAccount: () => void;
   onHome: () => void;
 }) {
   return (
@@ -29,6 +33,9 @@ export function TopBar({
         </span>
       </a>
       <div className="top-actions">
+        <button type="button" className="quiet account-link" onClick={onAccount}>
+          {accountLabel}
+        </button>
         <label className="blood-toggle">
           <input
             type="checkbox"

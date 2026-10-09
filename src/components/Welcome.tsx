@@ -70,7 +70,8 @@ export function Welcome({
           Join game →
         </button>
         <small>
-          No account needed. Your seat is saved on this browser for seven days.
+          An account is optional. Use Account to keep your army when you switch
+          devices. Your battle seat stays on this browser for seven days.
         </small>
       </div>
     </section>

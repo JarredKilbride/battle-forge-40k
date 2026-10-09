@@ -1,7 +1,17 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ArmyPanel } from "./ArmyPanel";
 import {
+  readAccount,
+  sameArmy,
+  saveAccountArmy,
+  writeAccount,
+  type AccountResult,
+  type AccountSession,
+} from "./accountClient";
+import { ArmyPanel } from "./ArmyPanel";
+import type { Army } from "./army";
+import {
+  AccountDialog,
   BattleGuide,
   ConfirmDialog,
   ErrorNotice,
@@ -19,6 +29,9 @@ import "./style.css";
 
 function App() {
   const [blood, setBlood] = useState(readBloodMotion);
+  const [account, setAccount] = useState<AccountSession | null>(readAccount);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [savedArmy, setSavedArmy] = useState<Army | null>(null);
   const {
     session,
     game,
@@ -70,6 +83,27 @@ function App() {
     applyArmyWeapon,
     removeProfile,
   } = useBattleSession();
+
+  function remember(next: AccountSession | null) {
+    writeAccount(next);
+    setAccount(next);
+  }
+
+  function signedIn(result: AccountResult) {
+    remember({ email: result.email, token: result.token });
+    if (result.army && army && !sameArmy(result.army, army)) {
+      setSavedArmy(result.army);
+      return;
+    }
+    if (result.army) storeArmy(result.army);
+    else if (army) {
+      void saveAccountArmy(army).catch((caught) =>
+        setError(caught instanceof Error ? caught.message : "Could not save your army."),
+      );
+    }
+    setAccountOpen(false);
+  }
+
   return (
     <>
       <TopBar
@@ -77,10 +111,12 @@ function App() {
         online={online}
         lastSync={lastSync}
         blood={blood}
+        accountLabel={account?.email ?? "Account"}
         onBlood={(enabled) => {
           setBlood(enabled);
           writeBloodMotion(enabled);
         }}
+        onAccount={() => setAccountOpen(true)}
         onHome={() => setView("battle")}
       />
       <main>
@@ -190,6 +226,7 @@ function App() {
                 army={army}
                 blood={blood}
                 bloodHit={bloodHit}
+                accountEmail={account?.email}
                 onArmy={storeArmy}
                 onUseWeapon={(unit, model, weapon) =>
                   applyArmyWeapon(unit, model, weapon, true)
@@ -230,6 +267,38 @@ function App() {
         Check current mission, army rules and updates. Not affiliated with Games
         Workshop.
       </footer>
+      {accountOpen && (
+        <AccountDialog
+          account={account}
+          conflict={savedArmy !== null}
+          onClose={() => {
+            setAccountOpen(false);
+            setSavedArmy(null);
+          }}
+          onSignedIn={signedIn}
+          onSignedOut={() => {
+            remember(null);
+            setSavedArmy(null);
+            setAccountOpen(false);
+          }}
+          onUseSaved={() => {
+            if (savedArmy) storeArmy(savedArmy);
+            setSavedArmy(null);
+            setAccountOpen(false);
+          }}
+          onKeepDevice={() => {
+            if (army) {
+              void saveAccountArmy(army).catch((caught) =>
+                setError(
+                  caught instanceof Error ? caught.message : "Could not save your army.",
+                ),
+              );
+            }
+            setSavedArmy(null);
+            setAccountOpen(false);
+          }}
+        />
+      )}
       {confirm && (
         <ConfirmDialog
           kind={confirm}
