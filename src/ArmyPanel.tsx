@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { save } from './api';
-import type { Army, ArmyModel, ArmyUnit, ArmyWeapon } from './army';
-import { parseArmyJson } from './army';
+import { useState } from "react";
+import { save } from "./api";
+import type { Army, ArmyModel, ArmyUnit, ArmyWeapon } from "./army";
+import { parseArmyJson } from "./army";
 
 export function ArmyPanel({
   army,
@@ -14,18 +14,22 @@ export function ArmyPanel({
   onUseWeapon?: (unit: ArmyUnit, model: ArmyModel, weapon: ArmyWeapon) => void;
   compact?: boolean;
 }) {
-  const [paste, setPaste] = useState('');
-  const [error, setError] = useState('');
+  const [paste, setPaste] = useState("");
+  const [error, setError] = useState("");
 
   function importText(text: string) {
     try {
       const next = parseArmyJson(text);
-      save('bf.army', next);
+      save("bf.army", next);
       onArmy(next);
-      setError('');
-      setPaste('');
+      setError("");
+      setPaste("");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not import that roster.');
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Could not import that roster.",
+      );
     }
   }
 
@@ -33,55 +37,100 @@ export function ArmyPanel({
     try {
       importText(await file.text());
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not read that file.');
+      setError(
+        caught instanceof Error ? caught.message : "Could not read that file.",
+      );
     }
   }
 
   function clearArmy() {
-    localStorage.removeItem('bf.army');
+    localStorage.removeItem("bf.army");
     onArmy(null);
-    setError('');
+    setError("");
   }
 
   const units = army?.units ?? [];
-  const modelCount = units.reduce((sum, unit) => sum + unit.models.reduce((models, model) => models + model.count, 0), 0);
+  const modelCount = units.reduce(
+    (sum, unit) =>
+      sum + unit.models.reduce((models, model) => models + model.count, 0),
+    0,
+  );
   const list = <ArmyList army={army} units={units} onUseWeapon={onUseWeapon} />;
 
   return (
-    <section className={compact ? 'army-panel army-compact' : 'panel army-panel'}>
+    <section
+      className={compact ? "army-panel army-compact" : "panel army-panel"}
+    >
       {!compact && <p className="eyebrow">YOUR DEVICE · IMPORTED ROSTER</p>}
-      <h2>{army ? army.name : 'Import a roster'}</h2>
+      <h2>{army ? army.name : "Import a roster"}</h2>
       {army ? (
         <div className="army-meta">
           {army.faction && <span>{army.faction}</span>}
-          <span><strong>{army.points}</strong> / {army.limit} pts</span>
-          <span>{units.length} units · {modelCount} models</span>
+          <span>
+            <strong>{army.points}</strong> / {army.limit} pts
+          </span>
+          <span>
+            {units.length} units · {modelCount} models
+          </span>
         </div>
       ) : (
-        <p>Import a New Recruit or BattleScribe roster JSON. It stays on this browser.</p>
+        <p>
+          Import a New Recruit or BattleScribe roster JSON. It stays on this
+          browser.
+        </p>
       )}
-      {error && <p className="army-error" role="alert">{error}</p>}
+      {error && (
+        <p className="army-error" role="alert">
+          {error}
+        </p>
+      )}
       <div className="army-import">
-        <label className="field">Roster file (.json)
+        <label className="field">
+          Roster file (.json)
           <input
             type="file"
             accept=".json,application/json"
-            onChange={event => {
+            onChange={(event) => {
               const file = event.target.files?.[0];
-              event.target.value = '';
+              event.target.value = "";
               if (file) void importFile(file);
             }}
           />
         </label>
-        <label className="field">Paste roster JSON
-          <textarea value={paste} onChange={event => setPaste(event.target.value)} placeholder='{"roster":{"name":"Army","forces":[]}}' />
+        <label className="field">
+          Paste roster JSON
+          <textarea
+            value={paste}
+            onChange={(event) => setPaste(event.target.value)}
+            placeholder='{"roster":{"name":"Army","forces":[]}}'
+          />
         </label>
         <div className="actions">
-          <button type="button" disabled={!paste.trim()} onClick={() => importText(paste)}>Import pasted roster</button>
-          {army && <button type="button" className="quiet" onClick={clearArmy}>Clear army</button>}
+          <button
+            type="button"
+            disabled={!paste.trim()}
+            onClick={() => importText(paste)}
+          >
+            Import pasted roster
+          </button>
+          {army && (
+            <button type="button" className="quiet" onClick={clearArmy}>
+              Clear army
+            </button>
+          )}
         </div>
       </div>
-      {army && (compact ? <details className="help"><summary>Show units<span aria-hidden>+</span></summary><div>{list}</div></details> : list)}
+      {army &&
+        (compact ? (
+          <details className="help">
+            <summary>
+              Show units<span aria-hidden>+</span>
+            </summary>
+            <div>{list}</div>
+          </details>
+        ) : (
+          list
+        ))}
     </section>
   );
 }
@@ -105,25 +154,46 @@ function ArmyList({
           <div className="army-models">
             {unit.models.map((model, modelIndex) => (
               <div className="army-model" key={`${model.name}-${modelIndex}`}>
-                <strong>{model.name}{model.count > 1 ? ` ×${model.count}` : ''}</strong>
+                <strong>
+                  {model.name}
+                  {model.count > 1 ? ` ×${model.count}` : ""}
+                </strong>
                 <div className="army-stats">
                   <span>M {model.m}</span>
                   <span>T {model.t}</span>
                   <span>SV {model.sv}</span>
                   <span>W {model.w}</span>
-                  <span>Invuln {model.invuln ? `${model.invuln}+` : 'none'}</span>
+                  <span>
+                    Invuln {model.invuln ? `${model.invuln}+` : "none"}
+                  </span>
                 </div>
                 <ul className="army-weapons">
                   {model.weapons.map((weapon, weaponIndex) => (
-                    <li className="army-weapon" key={`${weapon.kind}-${weapon.name}-${weaponIndex}`}>
+                    <li
+                      className="army-weapon"
+                      key={`${weapon.kind}-${weapon.name}-${weaponIndex}`}
+                    >
                       <div>
                         <strong>{weapon.name}</strong>
                         <p>
-                          {weapon.kind} · ×{weapon.count} · {weapon.range} · A {weapon.attacks} · {weapon.kind === 'ranged' ? 'BS' : 'WS'} {weapon.skill} · S {weapon.strength} · AP {weapon.ap} · D {weapon.damage}
-                          {weapon.keywords && weapon.keywords !== '—' ? ` · ${weapon.keywords}` : ''}
+                          {weapon.kind} · ×{weapon.count} · {weapon.range} · A{" "}
+                          {weapon.attacks} ·{" "}
+                          {weapon.kind === "ranged" ? "BS" : "WS"}{" "}
+                          {weapon.skill} · S {weapon.strength} · AP {weapon.ap}{" "}
+                          · D {weapon.damage}
+                          {weapon.keywords && weapon.keywords !== "—"
+                            ? ` · ${weapon.keywords}`
+                            : ""}
                         </p>
                       </div>
-                      {onUseWeapon && <button type="button" onClick={() => onUseWeapon(unit, model, weapon)}>Use weapon</button>}
+                      {onUseWeapon && (
+                        <button
+                          type="button"
+                          onClick={() => onUseWeapon(unit, model, weapon)}
+                        >
+                          Use weapon
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>

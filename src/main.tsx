@@ -1,78 +1,237 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import { QRCodeSVG } from 'qrcode.react';
-import { load, save, request, readGame, sendAction } from './api';
-import { phases, defaultProfile, type Profile, type Session, type Game, type Action, type Dice } from './types';
-import { guidance, rulesUrl } from './guidance';
-import { ArmyPanel } from './ArmyPanel';
-import { weaponNeedsReview, weaponProfile, type Army, type ArmyModel, type ArmyUnit, type ArmyWeapon } from './army';
-import './style.css';
+import { createRoot } from "react-dom/client";
+import { ArmyPanel } from "./ArmyPanel";
+import {
+  BattleGuide,
+  ConfirmDialog,
+  ErrorNotice,
+  GameShell,
+  HistoryView,
+  Lobby,
+  ProfilesView,
+  TopBar,
+  Welcome,
+} from "./components";
+import { rulesUrl } from "./guidance";
+import { useBattleSession } from "./useBattleSession";
+import "./style.css";
 
-function Help({title,children}:{title:string;children:React.ReactNode}){return <details className="help"><summary>{title}<span aria-hidden>+</span></summary><div>{children}</div></details>;}
-function storedArmy():Army|null{const army=load<Army|null>('bf.army',null);if(!army||typeof army!=='object'||!Array.isArray(army.units))return null;return army;}
-function ArmyAttackPicker({army,phase,unitIndex,pick,onUnit,onWeapon}:{army:Army;phase:number;unitIndex:string;pick:{unit:ArmyUnit;model:ArmyModel;weapon:ArmyWeapon}|null;onUnit:(index:string)=>void;onWeapon:(unit:ArmyUnit,model:ArmyModel,weapon:ArmyWeapon)=>void}){
- const kind=phase===2?'ranged':'melee';
- const unit=unitIndex!==''?army.units[Number(unitIndex)]:undefined;
- const weapons=unit?unit.models.flatMap((model,modelIndex)=>model.weapons.flatMap((weapon,weaponIndex)=>weapon.kind===kind?[{model,weapon,key:`${modelIndex}:${weaponIndex}`}]:[])):[];
- const selected=pick&&unit&&pick.unit===unit?weapons.find(entry=>entry.weapon===pick.weapon&&entry.model===pick.model):undefined;
- const notes=selected&&pick?weaponNeedsReview(pick.weapon):[];
- return <div className="army-pick"><label className="field">Army unit<select value={unit?unitIndex:''} onChange={e=>onUnit(e.target.value)}><option value="">Choose a unit</option>{army.units.map((entry,index)=><option key={`${entry.name}-${index}`} value={String(index)}>{entry.name}</option>)}</select></label><label className="field">{kind==='ranged'?'Ranged weapon':'Melee weapon'}<select value={selected?.key??''} onChange={e=>{const found=weapons.find(entry=>entry.key===e.target.value);if(found&&unit)onWeapon(unit,found.model,found.weapon);}}><option value="">Choose a weapon</option>{weapons.map(entry=><option key={entry.key} value={entry.key}>{unit&&unit.models.length>1?`${entry.model.name}: `:''}{entry.weapon.name}{entry.weapon.count>1?` ×${entry.weapon.count}`:''}</option>)}</select></label>{unit&&!weapons.length&&<p>This unit has no {kind} weapons in the roster.</p>}{notes.length>0&&<ul className="army-notes">{notes.map(note=><li key={note}>{note}</li>)}</ul>}</div>;
+function App() {
+  const {
+    session,
+    game,
+    error,
+    setError,
+    busy,
+    online,
+    lastSync,
+    name,
+    setName,
+    code,
+    setCode,
+    view,
+    setView,
+    profile,
+    setProfile,
+    profiles,
+    army,
+    armyPick,
+    armyUnit,
+    setArmyUnit,
+    setArmyPick,
+    first,
+    setFirst,
+    mode,
+    setMode,
+    faces,
+    setFaces,
+    note,
+    setNote,
+    copyState,
+    confirm,
+    setConfirm,
+    retry,
+    me,
+    active,
+    myTurn,
+    disabled,
+    share,
+    localTest,
+    enter,
+    act,
+    leave,
+    copy,
+    storeProfile,
+    storeArmy,
+    applyArmyWeapon,
+    removeProfile,
+  } = useBattleSession();
+  return (
+    <>
+      <TopBar
+        connected={!!session}
+        online={online}
+        lastSync={lastSync}
+        onHome={() => setView("battle")}
+      />
+      <main>
+        {error && (
+          <ErrorNotice
+            message={error}
+            retry={retry}
+            busy={busy}
+            onRetry={() => act({ type: "unused" }, true)}
+            onDismiss={() => setError("")}
+          />
+        )}
+        {!session ? (
+          <Welcome
+            name={name}
+            code={code}
+            busy={busy}
+            onName={setName}
+            onCode={setCode}
+            onCreate={() => enter("create")}
+            onJoin={() => enter("join")}
+          />
+        ) : !game ? (
+          <section className="panel loading">
+            <h1>Rejoining your battle…</h1>
+            <p>Your saved player session is being restored.</p>
+            <button onClick={() => setConfirm("leave")}>
+              Leave this device session
+            </button>
+          </section>
+        ) : game.status === "lobby" ? (
+          <Lobby
+            game={game}
+            meId={session.playerId}
+            army={army}
+            isHost={session.playerId === game.host}
+            first={first}
+            disabled={disabled}
+            localTest={localTest}
+            copyState={copyState}
+            share={share}
+            onFirst={setFirst}
+            onCopy={() => void copy()}
+            onStart={() =>
+              act({ type: "start", first: first || game.order[0] })
+            }
+            onSolo={() =>
+              act({
+                type: "start",
+                first: me?.id || game.order[0],
+                solo: true,
+              })
+            }
+            onLeave={() => setConfirm("leave")}
+            onArmy={storeArmy}
+          />
+        ) : (
+          <GameShell
+            game={game}
+            meId={me?.id}
+            activeId={active?.id}
+            activeName={active?.name}
+            myTurn={myTurn}
+            isHost={session.playerId === game.host}
+            view={view}
+            disabled={disabled}
+            onView={setView}
+            onScore={(stat, value) => act({ type: "score", stat, value })}
+            onUndoAnswer={(accept) => act({ type: "undo-answer", accept })}
+            onLeave={() => setConfirm("leave")}
+            onEnd={() => setConfirm("end")}
+          >
+            {view === "battle" && (
+              <BattleGuide
+                game={game}
+                myTurn={myTurn}
+                activeName={active?.name}
+                meId={me?.id}
+                disabled={disabled}
+                army={army}
+                armyUnit={armyUnit}
+                armyPick={armyPick}
+                profiles={profiles}
+                profile={profile}
+                mode={mode}
+                faces={faces}
+                onCheck={(key) => act({ type: "check", key })}
+                onFinish={() => setConfirm("next")}
+                onProfile={setProfile}
+                onArmyUnit={(index) => {
+                  setArmyUnit(index);
+                  setArmyPick(null);
+                }}
+                onArmyWeapon={(unit, model, weapon) =>
+                  applyArmyWeapon(unit, model, weapon, false)
+                }
+                onMode={setMode}
+                onFaces={setFaces}
+                onAct={act}
+              />
+            )}
+            {view === "army" && (
+              <ArmyPanel
+                army={army}
+                onArmy={storeArmy}
+                onUseWeapon={(unit, model, weapon) =>
+                  applyArmyWeapon(unit, model, weapon, true)
+                }
+              />
+            )}
+            {view === "profiles" && (
+              <ProfilesView
+                profiles={profiles}
+                profile={profile}
+                onProfile={setProfile}
+                onSave={storeProfile}
+                onRemove={removeProfile}
+              />
+            )}
+            {view === "history" && (
+              <HistoryView
+                game={game}
+                disabled={disabled}
+                note={note}
+                onNote={setNote}
+                onAdd={() => {
+                  void act({ type: "note", text: note });
+                  setNote("");
+                }}
+                onUndo={() => act({ type: "undo-request" })}
+              />
+            )}
+          </GameShell>
+        )}
+      </main>
+      <footer>
+        Unofficial fan companion · Core guide: June 2026 ·{" "}
+        <a href={rulesUrl} target="_blank" rel="noreferrer">
+          Official rules
+        </a>
+        <br />
+        Check current mission, army rules and updates. Not affiliated with Games
+        Workshop.
+      </footer>
+      {confirm && (
+        <ConfirmDialog
+          kind={confirm}
+          phase={game?.phase}
+          busy={busy}
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => {
+            if (confirm === "leave") leave();
+            else {
+              void act({ type: confirm });
+              setConfirm(null);
+            }
+          }}
+        />
+      )}
+    </>
+  );
 }
-function DiceRow({dice}:{dice:Dice}){return <div className="dice-block"><small>{dice.label.toUpperCase()} · {dice.target<=6?`${dice.target}+`:'No possible save'} · {dice.mode}</small><div className="dice-grid">{dice.faces.map((n,i)=><span className={`dice ${n>=dice.target&&n!==1?'pass':'fail'} ${n===6?'critical':''}`} key={i} title={dice.originals&&dice.originals[i]!==n?`Re-rolled ${dice.originals[i]} → ${n}`:String(n)}>{n}{dice.originals&&dice.originals[i]!==n&&<sup>↻</sup>}</span>)}{!dice.faces.length&&<span>No dice needed.</span>}</div></div>;}
-function Field({label,value,onChange,min=0,max=999}:{label:string;value:number;onChange:(n:number)=>void;min?:number;max?:number}){return <label className="field">{label}<input type="number" min={min} max={max} step="1" value={value} onChange={e=>onChange(e.target.value===''?min:Number(e.target.value))}/></label>;}
-function ProfileForm({p,set}:{p:Profile;set:(p:Profile)=>void}){
- const field=(key:keyof Profile,label:string,min:number,max:number)=><Field key={key} label={label} value={p[key] as number} min={min} max={max} onChange={n=>set({...p,[key]:n})}/>;
- return <><label className="field">Weapon / unit name<input maxLength={40} value={p.name} onChange={e=>set({...p,name:e.target.value})}/></label><div className="fields">{field('attacks','Attacks',1,200)}{field('hit','Hit on (2–6)',2,6)}{field('strength','Strength',1,30)}{field('toughness','Target toughness',1,30)}{field('ap','AP (negative)',-6,0)}{field('save','Save (7 = none)',2,7)}{field('invuln','Invulnerable (0 = none)',0,6)}{field('damage','Damage per attack',1,20)}</div><div className="abilities">{([['reroll','Re-roll hit 1s'],['lethal','Lethal Hits'],['sustained','Sustained Hits 1'],['devastating','Devastating Wounds']] as const).map(([k,label])=><label key={k}><input type="checkbox" checked={p[k]} onChange={e=>set({...p,[k]:e.target.checked})}/>{label}</label>)}</div></>;
-}
-function App(){
- const [session,setSession]=useState<Session|null>(()=>load('bf.session',null));
- const [game,setGame]=useState<Game|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[online,setOnline]=useState(false),[lastSync,setLastSync]=useState(0);
- const [name,setName]=useState(()=>load('bf.name','')),[code,setCode]=useState(()=>new URLSearchParams(location.search).get('room')||'');
- const [view,setView]=useState<'battle'|'profiles'|'history'|'army'>('battle'),[profile,setProfile]=useState<Profile>(defaultProfile),[profiles,setProfiles]=useState<Profile[]>(()=>load('bf.profiles',[]));
- const [army,setArmy]=useState<Army|null>(storedArmy),[armyPick,setArmyPick]=useState<{unit:ArmyUnit;model:ArmyModel;weapon:ArmyWeapon}|null>(null),[armyUnit,setArmyUnit]=useState('');
- const [first,setFirst]=useState(''),[mode,setMode]=useState<'digital'|'physical'>('digital'),[faces,setFaces]=useState(''),[note,setNote]=useState(''),[copyState,setCopyState]=useState('Copy invite link');
- const [confirm,setConfirm]=useState<'next'|'end'|'leave'|null>(null);
- const lock=useRef(false),version=useRef(-1),pending=useRef<{action:Action;version:number;id:string}|null>(null);
- const [retry,setRetry]=useState(false);
- function accept(g:Game){if(g.version>=version.current){version.current=g.version;setGame(g);}setOnline(true);setLastSync(Date.now());}
- useEffect(()=>{if(!session)return;let alive=true,inFlight=false;let timer:ReturnType<typeof setTimeout>;const poll=async()=>{if(inFlight||!alive)return;inFlight=true;try{const r=await readGame(session);if(alive)accept(r.game);}catch(e){if(alive){setOnline(false);setError((e as Error).message);}}finally{inFlight=false;if(alive)timer=setTimeout(poll,document.hidden?12000:2500);}};void poll();const wake=()=>{if(!document.hidden){clearTimeout(timer);void poll();}};window.addEventListener('online',wake);document.addEventListener('visibilitychange',wake);return()=>{alive=false;clearTimeout(timer);window.removeEventListener('online',wake);document.removeEventListener('visibilitychange',wake);};},[session]);
- useEffect(()=>{if(!confirm)return;const previous=document.activeElement as HTMLElement|null;const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){setConfirm(null);return;}if(e.key!=='Tab')return;const buttons=Array.from(document.querySelectorAll<HTMLButtonElement>('.modal button:not(:disabled)'));const first=buttons[0],last=buttons.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}};document.addEventListener('keydown',key);return()=>{document.removeEventListener('keydown',key);previous?.focus();};},[confirm]);
- async function enter(op:'create'|'join') {if(lock.current)return;lock.current=true;setBusy(true);setError('');try{ensureStorage();const token=load<string>('bf.pending-token','')||crypto.randomUUID();save('bf.pending-token',token);const r=await request(token,{op,name,code:code.trim().toUpperCase()});const s={token,code:r.game.code,playerId:r.playerId};save('bf.session',s);save('bf.name',name);localStorage.removeItem('bf.pending-token');version.current=-1;setSession(s);accept(r.game);history.replaceState(null,'',location.pathname);}catch(e){setError((e as Error).message);}finally{lock.current=false;setBusy(false);}}
- function ensureStorage(){save('bf.storage-check',true);localStorage.removeItem('bf.storage-check');}
- async function act(action:Action,isRetry=false){if(!session||!game||lock.current)return;lock.current=true;setBusy(true);setError('');const job=isRetry?pending.current:{action,version:game.version,id:crypto.randomUUID()};if(!job){lock.current=false;setBusy(false);return;}pending.current=job;try{const r=await sendAction(session,job.version,job.action,job.id);accept(r.game);pending.current=null;setRetry(false);setFaces('');}catch(e){setError((e as Error).message);const definitive=!!(e as {status?:number}).status;setRetry(!definitive);if(definitive)pending.current=null;try{const r=await readGame(session);accept(r.game);}catch{setOnline(false);}}finally{lock.current=false;setBusy(false);}}
- function leave(){localStorage.removeItem('bf.session');setSession(null);setGame(null);version.current=-1;pending.current=null;setRetry(false);setConfirm(null);setError('');}
- const me=game?.players.find(p=>p.id===session?.playerId),active=game?.players.find(p=>p.id===game.order[game.turn]);
- const myTurn=active?.id===session?.playerId;const disabled=busy||!online||retry;const attack=game?.attack;
- const rollCount=attack?(attack.stage==='hits'?attack.profile.attacks:attack.stage==='wounds'?attack.hits-attack.auto:attack.wounds):0;
- const actor=attack?(attack.stage==='saves'||attack.stage==='damage'?attack.defender:attack.attacker):null;
- const rollTarget=attack?(attack.stage==='hits'?attack.profile.hit:attack.stage==='wounds'?wound(attack.profile.strength,attack.profile.toughness):Math.min(attack.profile.save-attack.profile.ap,attack.profile.invuln||99)):0;
- const canStart=game?.status==='battle'&&(game.phase===4||game.phase===2&&myTurn)&&(!attack||attack.stage==='done');
- const share=game?`${location.origin}${location.pathname}?room=${game.code}`:'';
- const localTest=location.hostname==='localhost'||location.hostname==='127.0.0.1'||location.hostname==='::1';
- async function copy(){try{await navigator.clipboard.writeText(share);setCopyState('Copied!');}catch{setCopyState('Select and copy the link below');}}
- function storeProfile(){try{if(!profile.name.trim())throw new Error('Name your weapon first.');if(profiles.length>=30&&!profiles.some(p=>p.name===profile.name))throw new Error('You can save up to 30 profiles.');const next=[...profiles.filter(p=>p.name!==profile.name),profile];save('bf.profiles',next);setProfiles(next);}catch(e){setError((e as Error).message);}}
- function storeArmy(next:Army|null){setArmy(next);setArmyPick(null);setArmyUnit('');}
- function applyArmyWeapon(unit:ArmyUnit,model:ArmyModel,weapon:ArmyWeapon,goToBattle:boolean){setArmyPick({unit,model,weapon});const index=army?.units.indexOf(unit)??-1;setArmyUnit(index>=0?String(index):'');setProfile(weaponProfile(unit,model,weapon,{toughness:profile.toughness,save:profile.save,invuln:profile.invuln}));if(goToBattle)setView('battle');}
- return <><header className="topbar"><a className="brand" href="#" onClick={e=>{e.preventDefault();setView('battle');}}><span className="sigil">✦</span><span>BATTLE FORGE<small>TABLETOP COMPANION</small></span></a><div className="connection">{session?<><span className={online?'lamp':'lamp offline'}/>{online?'Connected':'Reconnecting'}<small>{lastSync?`Last sync ${new Date(lastSync).toLocaleTimeString()}`:'Restoring session'}</small></>:<span>1 v 1 · 11TH EDITION GUIDE</span>}</div></header>
- <main>
- {error&&<div className="notice error" role="alert">{error}{retry&&<button disabled={busy} onClick={()=>act({type:'unused'},true)}>Retry same action safely</button>}<button className="quiet" onClick={()=>setError('')}>Dismiss</button></div>}
- {!session?<section className="welcome"><div className="intro"><p className="eyebrow">LESS CONFUSION. MORE BATTLE.</p><h1>Your next move.<br/><em>Made clear.</em></h1><p>A shared turn guide for you and your opponent. One battle, two phones, every action in order.</p><div className="intro-steps"><span>01 / Join forces</span><span>02 / Follow the phase</span><span>03 / Roll together</span></div></div><div className="panel join"><p className="eyebrow">ENTER THE BATTLEFIELD</p><h2>Ready your army</h2><label className="field">Your name<input autoComplete="nickname" maxLength={40} placeholder="Commander name" value={name} onChange={e=>setName(e.target.value)}/></label><button className="primary" disabled={busy||!name.trim()} onClick={()=>enter('create')}>{busy?'Connecting…':'Create a game'}</button><div className="divider">OR JOIN YOUR OPPONENT</div><label className="field">Room code<input autoCapitalize="characters" autoComplete="off" maxLength={10} placeholder="10-character code" value={code} onChange={e=>setCode(e.target.value.toUpperCase())}/></label><button disabled={busy||!name.trim()||code.length!==10} onClick={()=>enter('join')}>Join game →</button><small>No account needed. Your seat is saved on this browser for seven days.</small></div></section>
- :!game?<section className="panel loading"><h1>Rejoining your battle…</h1><p>Your saved player session is being restored.</p><button onClick={()=>setConfirm('leave')}>Leave this device session</button></section>
- :game.status==='lobby'?<section className="lobby panel"><p className="eyebrow">WAR ROOM · {game.players.length}/2 PLAYERS</p><h1>Gather your opponent.</h1><p>Share this room code. Keep this browser to retain your seat.</p><div className="invite"><div><strong className="room-code">{game.code}</strong><button onClick={copy}>{copyState}</button><input aria-label="Invite link" readOnly value={share} onFocus={e=>e.target.select()}/></div><div className="qr"><QRCodeSVG value={share} size={138} title="Scan to join this game"/></div></div><div className="players">{game.players.map(p=><div className="player" key={p.id}><span className="avatar">{p.name.slice(0,1).toUpperCase()}</span><strong>{p.name}</strong><small>{p.id===me?.id?'You':'Opponent'} · joined</small></div>)}{game.players.length<2&&<div className="player empty">Waiting for your opponent…</div>}</div><ArmyPanel compact army={army} onArmy={storeArmy}/>{session.playerId===game.host?<><label className="field">Who takes the first turn?<select value={first||game.order[0]} onChange={e=>setFirst(e.target.value)}>{game.players.map(p=><option value={p.id} key={p.id}>{p.name}</option>)}</select></label><button className="primary" disabled={disabled||game.players.length<2} onClick={()=>act({type:'start',first:first||game.order[0]})}>Start battle →</button>{localTest&&game.players.length<2&&<><button className="primary" disabled={disabled} onClick={()=>act({type:'start',first:me?.id||game.order[0],solo:true})}>Start solo test →</button><small>Solo test plays both sides on this device, including saves and damage.</small></>}</>:<p>The host will choose the first player and start the battle.</p>}<button className="quiet" onClick={()=>setConfirm('leave')}>Leave on this device</button></section>
- :<><div className="battle-heading"><div><p className="eyebrow">ROOM {game.code} · ROUND {game.round}</p><h1>{game.status==='ended'?'Battle complete':`${active?.name}’s turn`}</h1></div><span className="your-turn">{game.status==='ended'?'FINAL SCORE':myTurn?'YOUR TURN':'OPPONENT’S TURN'}</span></div><div className="scoreboard">{game.players.map(p=><section className={`player score ${p.id===active?.id?'active':''}`} key={p.id}><div><small>{p.id===me?.id?'YOU':'OPPONENT'}</small><h3>{p.name}</h3></div>{(['cp','vp'] as const).map(stat=><div className="counter" key={stat}><span>{stat.toUpperCase()}</span><button aria-label={`Decrease ${p.name} ${stat}`} disabled={disabled||p.id!==me?.id||p[stat]===0||game.status==='ended'} onClick={()=>act({type:'score',stat,value:p[stat]-1})}>−</button><strong>{p[stat]}</strong><button aria-label={`Increase ${p.name} ${stat}`} disabled={disabled||p.id!==me?.id||game.status==='ended'} onClick={()=>act({type:'score',stat,value:p[stat]+1})}>+</button></div>)}</section>)}</div>
- {game.undo&&<div className="notice"><strong>Undo requested</strong><p>{game.undo.label}</p>{game.undo.by!==me?.id||game.players.length===1?<div className="actions"><button disabled={disabled} onClick={()=>act({type:'undo-answer',accept:true})}>Approve undo</button><button disabled={disabled} onClick={()=>act({type:'undo-answer',accept:false})}>Keep action</button></div>:<p>Waiting for your opponent’s approval.</p>}</div>}
- <nav className="tabs" aria-label="Game views">{(['battle','profiles','army','history'] as const).map(v=><button key={v} aria-current={view===v?'page':undefined} onClick={()=>setView(v)}>{v==='battle'?'Battle guide':v==='profiles'?'Weapon profiles':v==='army'?'Army':'Action history'}</button>)}</nav>
- {view==='battle'&&<><ol className="phase-strip">{phases.map((p,i)=><li key={p} aria-current={i===game.phase?'step':undefined}><span>{String(i+1).padStart(2,'0')}</span>{p}</li>)}</ol><div className="battle-grid"><section className="panel phase-panel"><p className="eyebrow">{phases[game.phase]} PHASE</p><h2>{guidance[game.phase].title}</h2><p>{guidance[game.phase].intro}</p><div className="checklist">{guidance[game.phase].tasks.map((task,i)=><label key={task}><input type="checkbox" checked={game.checks.includes(String(i))} disabled={disabled||!myTurn||!!game.undo||game.status==='ended'} onChange={()=>act({type:'check',key:String(i)})}/><span>{task}</span></label>)}</div><Help title="Explain this phase"><p>{guidance[game.phase].help}</p><a href={`${rulesUrl}#page=${guidance[game.phase].page}`} target="_blank" rel="noreferrer">Read the official core rules ↗</a></Help><Help title="Special rule or a mistake?"><p>Use your mission and current army rules for exceptions. Scores are manual. Record an agreed exception in history, or request undo and have your opponent approve it.</p></Help><button className="primary" disabled={disabled||!myTurn||!!game.undo||game.status==='ended'||!!attack&&attack.stage!=='done'} onClick={()=>setConfirm('next')}>{game.phase===4?'Finish turn →':'Finish phase →'}</button>{!myTurn&&game.status!=='ended'&&<small>{active?.name} controls phase advancement. You can still resolve your saves and update your scores.</small>}</section>
- <section className="panel combat-panel"><p className="eyebrow">SHARED COMBAT</p><h2>{attack&&attack.stage!=='done'?attack.profile.name:'Resolve an attack'}</h2>
- {(!attack||attack.stage==='done')?<>{attack&&<div className="result"><strong>{attack.damage}</strong><span>potential damage · previous attack</span></div>}{game.status==='ended'?<p>Your final results are saved in action history.</p>:canStart?<><p>Agree on the unit, target and eligible weapon before starting.</p>{army&&<ArmyAttackPicker army={army} phase={game.phase} unitIndex={armyUnit} pick={armyPick} onUnit={index=>{setArmyUnit(index);setArmyPick(null);}} onWeapon={(unit,model,weapon)=>applyArmyWeapon(unit,model,weapon,false)}/>}{profiles.length>0&&<label className="field">Load saved weapon<select defaultValue="" onChange={e=>{const p=profiles[Number(e.target.value)];if(p)setProfile(p);}}><option value="" disabled>Choose a profile</option>{profiles.map((p,i)=><option key={p.name} value={i}>{p.name}</option>)}</select></label>}<ProfileForm p={profile} set={setProfile}/><button className="primary" disabled={disabled||!!game.undo} onClick={()=>act({type:'attack',profile})}>Start attack →</button><Help title="Abilities and supported rolls"><p>Fixed attacks and damage, unmodified hit/wound rolls, hit re-rolls of 1, Lethal Hits, Sustained Hits 1 and Devastating Wounds are supported. Selecting Lethal Hits chooses auto-wounds. Resolve other modifiers, defensive abilities and variable damage on the tabletop, then record a note.</p></Help></>:<div className="empty-state"><span className="large-symbol">⚄</span><h3>{game.phase===2?'Waiting for the attacker':'Get ready for combat'}</h3><p>Guided attacks are available during Shooting and Fight. Complete the current phase on the tabletop.</p></div>}</>
- :<><div className="attack-steps">{['hits','wounds','saves','damage'].map(s=><span key={s} className={attack.stage===s?'selected':''}>{s}</span>)}</div><p className="actor">{game.players.find(p=>p.id===actor)?.name}: {attack.stage==='damage'?'apply damage on the tabletop':`roll ${rollCount} dice for ${attack.stage}`}</p>{attack.stage==='damage'?<><div className="result"><strong>{attack.damage}</strong><span>potential damage<br/>{attack.failed} failed saves · {attack.dev} devastating wounds</span></div><p>Allocate damage per attack. Excess damage on one model does not spill over. Apply defensive abilities manually.</p><button className="primary" disabled={disabled||actor!==me?.id||!!game.undo} onClick={()=>act({type:'damage'})}>Damage applied · finish attack</button></>:<><div className="target">{rollTarget<=6?<><strong>{rollTarget}+</strong><span>needed on each die</span></>:<><strong>—</strong><span>No possible save</span></>}</div>{actor===me?.id?<><fieldset className="dice-mode"><legend>Dice method</legend><label><input type="radio" name="mode" checked={mode==='digital'} onChange={()=>setMode('digital')}/>Digital</label><label><input type="radio" name="mode" checked={mode==='physical'} onChange={()=>setMode('physical')}/>Physical dice</label></fieldset>{mode==='physical'&&<label className="field">Enter all {rollCount} final dice faces (1–6, separated by spaces)<textarea value={faces} onChange={e=>setFaces(e.target.value)} placeholder="6 3 1 5"/>{attack.stage==='hits'&&attack.profile.reroll&&<small>Re-roll 1s once on the tabletop, then enter the final faces.</small>}</label>}<button className="primary" disabled={disabled||!!game.undo} onClick={()=>act({type:'roll',mode,faces:faces.trim()?faces.trim().split(/[\s,]+/).map(Number):[]})}>{mode==='digital'?`Roll ${rollCount} dice`:'Submit dice results'} →</button></>:<div className="notice">Waiting for your opponent. Their result will appear here.</div>}<Help title="Explain this roll"><p>{attack.stage==='hits'?'Roll one die per attack. Meet the hit target to score a hit; a natural 6 is critical. Selected abilities are applied automatically.':attack.stage==='wounds'?'Compare Strength and Toughness. Wound on 4+ when equal, 3+ when stronger, 2+ at double; 5+ when weaker, 6+ at half or less.':'The defender uses the better of armour adjusted by AP or an invulnerable save. A natural 1 fails. Devastating wounds bypass this step.'}</p></Help></>}{attack.dice.map((d,i)=><DiceRow key={i} dice={d}/>)}</>}
- </section></div></>}
- {view==='army'&&<ArmyPanel army={army} onArmy={storeArmy} onUseWeapon={(unit,model,weapon)=>applyArmyWeapon(unit,model,weapon,true)}/>}{view==='profiles'&&<section className="panel profile-page"><p className="eyebrow">YOUR DEVICE · SAVED WEAPONS</p><h2>Less typing. More playing.</h2><p>Profiles stay on this browser. Starting an attack shares that weapon with your opponent.</p><div className="saved-list">{profiles.map(p=><div key={p.name}><button onClick={()=>setProfile(p)}>{p.name}</button><button className="quiet" aria-label={`Delete ${p.name}`} onClick={()=>{const next=profiles.filter(x=>x.name!==p.name);save('bf.profiles',next);setProfiles(next);}}>Remove</button></div>)}</div><ProfileForm p={profile} set={setProfile}/><button className="primary" onClick={storeProfile}>Save weapon profile</button><small>Saving the same name replaces that profile.</small></section>}
- {view==='history'&&<section className="panel"><div className="section-head"><div><p className="eyebrow">SHARED RECORD</p><h2>Action history</h2></div><button disabled={disabled||!game.canUndo||!!game.undo} onClick={()=>act({type:'undo-request'})}>Request undo</button></div><form className="note-form" onSubmit={e=>{e.preventDefault();void act({type:'note',text:note});setNote('');}}><label className="field">Record a tabletop result or agreed exception<input maxLength={300} value={note} onChange={e=>setNote(e.target.value)} placeholder="Charge roll, damage adjustment, mission score…"/></label><button disabled={disabled||!note.trim()||!!game.undo||game.status==='ended'}>Add note</button></form><ol className="history">{[...game.history].reverse().map(e=><li key={e.id}><time>{new Date(e.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</time><div><p>{e.text}</p>{e.dice&&<Help title="View dice"><DiceRow dice={e.dice}/></Help>}</div></li>)}</ol><small>Last 250 actions retained. Undo restores the latest action’s game state without hiding its history.</small></section>}
- <div className="game-footer"><button className="quiet" onClick={()=>setConfirm('leave')}>Leave on this device</button>{session.playerId===game.host&&game.status==='battle'&&<button className="quiet" disabled={disabled||!!game.undo} onClick={()=>setConfirm('end')}>End battle</button>}<span>Room expires {new Date(game.expiresAt).toLocaleDateString()}</span></div></>}
- </main><footer>Unofficial fan companion · Core guide: June 2026 · <a href={rulesUrl} target="_blank" rel="noreferrer">Official rules</a><br/>Check current mission, army rules and updates. Not affiliated with Games Workshop.</footer>
- {confirm&&<div className="modal-backdrop"><section className="modal panel" role="dialog" aria-modal="true" aria-labelledby="confirm-title"><h2 id="confirm-title">{confirm==='leave'?'Leave this device session?':confirm==='end'?'End this battle?':game?.phase===4?'Finish your turn?':'Finish this phase?'}</h2><p>{confirm==='leave'?'This removes your saved seat from this browser. You cannot reclaim a full room with its code alone.':confirm==='end'?'Both players will see the final score. You can request an agreed undo from history.':'Make sure all units, abilities and scoring for this step are resolved. This moves the shared game forward.'}</p><div className="actions"><button autoFocus onClick={()=>setConfirm(null)}>Keep playing</button><button className="primary" disabled={busy} onClick={()=>{if(confirm==='leave')leave();else{void act({type:confirm});setConfirm(null);}}}>Confirm</button></div></section></div>}
- </>;
-}
-function wound(s:number,t:number){return s>=t*2?2:s>t?3:s===t?4:s*2<=t?6:5;}
-createRoot(document.getElementById('root')!).render(<App/>);
+
+createRoot(document.getElementById("root")!).render(<App />);
