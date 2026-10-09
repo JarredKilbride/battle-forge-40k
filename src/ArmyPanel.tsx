@@ -150,6 +150,17 @@ export function ArmyPanel({
   );
 }
 
+function imageSearchUrl(faction: string, modelName: string) {
+  const query = ["Warhammer 40k", faction, modelName]
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(" ");
+  return `https://www.google.com/search?${new URLSearchParams({
+    tbm: "isch",
+    q: query,
+  })}`;
+}
+
 function ArmyList({
   army,
   units,
@@ -174,10 +185,19 @@ function ArmyList({
                 {splash?.unit === unitIndex && splash.model === modelIndex && (
                   <BloodSplat />
                 )}
-                <strong>
-                  {model.name}
-                  {model.count > 1 ? ` ×${model.count}` : ""}
-                </strong>
+                <div className="model-title">
+                  <strong>
+                    {model.name}
+                    {model.count > 1 ? ` ×${model.count}` : ""}
+                  </strong>
+                  <a
+                    href={imageSearchUrl(army.faction, model.name)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Google images
+                  </a>
+                </div>
                 <WoundBar model={model} />
                 <div className="army-stats">
                   <span>M {model.m}</span>

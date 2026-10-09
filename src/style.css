@@ -1098,6 +1098,16 @@ footer {
   border-top: 1px solid #4b3338;
   padding-top: 12px;
 }
+.model-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 16px;
+}
+.model-title a {
+  font-size: 0.85rem;
+}
 .blood-splat {
   position: absolute;
   inset: 0;
@@ -1158,12 +1168,42 @@ footer {
     transform: translateY(12px) scale(1.25);
   }
 }
+.soldier-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+}
+.soldier {
+  width: 28px;
+  height: 46px;
+  fill: #d3ae73;
+}
+.soldier.vehicle {
+  width: 52px;
+  height: 36px;
+}
+.soldier.hurt {
+  fill: #c8556b;
+}
+.soldier.empty {
+  width: 40px;
+  height: 34px;
+  fill: #a46a64;
+}
 .wound-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+.wound-pips {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   width: 100%;
-  margin-top: 8px;
 }
 .wound-pip {
   position: relative;
