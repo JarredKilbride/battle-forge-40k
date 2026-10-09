@@ -27,6 +27,9 @@ export default async (req: Request): Promise<Response> => {
       );
       return result.modified;
     },
+    async delete(key) {
+      await store.delete(key);
+    },
   };
   return createAccountHandler(accounts)(req);
 };

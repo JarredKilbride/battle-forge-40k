@@ -2,11 +2,13 @@ import { QRCodeSVG } from "qrcode.react";
 import { ArmyPanel } from "../ArmyPanel";
 import type { Army } from "../army";
 import type { Game } from "../types";
+import { ArmyChoice } from "./ArmyChoice";
 
 export function Lobby({
   game,
   meId,
   army,
+  armies,
   isHost,
   first,
   disabled,
@@ -19,10 +21,12 @@ export function Lobby({
   onSolo,
   onLeave,
   onArmy,
+  onSelectArmy,
 }: {
   game: Game;
   meId: string | undefined;
   army: Army | null;
+  armies: Army[];
   isHost: boolean;
   first: string;
   disabled: boolean;
@@ -35,6 +39,7 @@ export function Lobby({
   onSolo: () => void;
   onLeave: () => void;
   onArmy: (army: Army | null) => void;
+  onSelectArmy: (name: string) => void;
 }) {
   const me = game.players.find((p) => p.id === meId);
   return (
@@ -69,6 +74,7 @@ export function Lobby({
           <div className="player empty">Waiting for your opponent…</div>
         )}
       </div>
+      <ArmyChoice army={army} armies={armies} onSelect={onSelectArmy} />
       <ArmyPanel compact army={army} onArmy={onArmy} />
       {isHost ? (
         <>

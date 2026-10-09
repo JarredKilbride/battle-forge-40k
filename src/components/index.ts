@@ -1,5 +1,5 @@
-export { AccountDialog } from "./AccountDialog";
 export { ArmyAttackPicker, type ArmyPick } from "./ArmyAttackPicker";
+export { ArmyChoice } from "./ArmyChoice";
 export { BattleGuide } from "./BattleGuide";
 export { BloodSplat, useBloodSplash } from "./BloodSplat";
 export { ConfirmDialog, type ConfirmKind } from "./ConfirmDialog";
@@ -8,6 +8,7 @@ export { GameShell, type GameView } from "./GameShell";
 export { HistoryView } from "./HistoryView";
 export { Lobby } from "./Lobby";
 export { ProfilesView } from "./ProfilesView";
+export { SettingsPage } from "./SettingsPage";
 export { TopBar } from "./TopBar";
 export { Welcome } from "./Welcome";
 export { WoundBar } from "./WoundBar";

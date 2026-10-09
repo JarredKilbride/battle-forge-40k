@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { saveAccountArmy } from "./accountClient";
+import { readArmyLibrary, upsertArmy, writeArmyLibrary } from "./armyLibrary";
 import { load, readGame, request, save, sendAction } from "./api";
 import { weaponProfile, type Army, type ArmyModel, type ArmyUnit, type ArmyWeapon } from "./army";
 import type { BloodHit } from "./bloodMotion";
@@ -41,6 +42,7 @@ export function useBattleSession() {
     [copyState, setCopyState] = useState("Copy invite link");
   const [confirm, setConfirm] = useState<ConfirmKind | null>(null);
   const [bloodHit, setBloodHit] = useState<BloodHit | null>(null);
+  const [armies, setArmies] = useState(readArmyLibrary);
   const lock = useRef(false),
     version = useRef(-1),
     pending = useRef<{ action: Action; version: number; id: string } | null>(
@@ -239,15 +241,31 @@ export function useBattleSession() {
     }
   }
   function persistArmy(next: Army | null) {
-    if (next) save("bf.army", next);
-    else localStorage.removeItem("bf.army");
-    void saveAccountArmy(next).catch((caught) => {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "Your army is saved on this browser. It could not be saved to your account.",
-      );
-    });
+    if (next) {
+      save("bf.army", next);
+      setArmies(upsertArmy(next));
+    } else localStorage.removeItem("bf.army");
+    void saveAccountArmy(next)
+      .then(() => setArmies(readArmyLibrary()))
+      .catch((caught) => {
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "Your army is saved on this browser. It could not be saved to your account.",
+        );
+      });
+  }
+  function replaceArmies(list: Army[]) {
+    writeArmyLibrary(list);
+    setArmies(list);
+  }
+  function selectArmy(name: string) {
+    if (!name) {
+      storeArmy(null);
+      return;
+    }
+    const picked = armies.find((entry) => entry.name === name);
+    if (picked) storeArmy(picked);
   }
   function storeArmy(next: Army | null) {
     persistArmy(next);
@@ -304,6 +322,9 @@ export function useBattleSession() {
     setProfile,
     profiles,
     army,
+    armies,
+    selectArmy,
+    replaceArmies,
     armyPick,
     armyUnit,
     setArmyUnit,

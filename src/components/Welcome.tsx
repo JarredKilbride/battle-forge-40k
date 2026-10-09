@@ -1,17 +1,26 @@
+import type { Army } from "../army";
+import { ArmyChoice } from "./ArmyChoice";
+
 export function Welcome({
   name,
   code,
   busy,
+  army,
+  armies,
   onName,
   onCode,
+  onSelectArmy,
   onCreate,
   onJoin,
 }: {
   name: string;
   code: string;
   busy: boolean;
+  army: Army | null;
+  armies: Army[];
   onName: (name: string) => void;
   onCode: (code: string) => void;
+  onSelectArmy: (name: string) => void;
   onCreate: () => void;
   onJoin: () => void;
 }) {
@@ -47,6 +56,7 @@ export function Welcome({
             onChange={(e) => onName(e.target.value)}
           />
         </label>
+        <ArmyChoice army={army} armies={armies} onSelect={onSelectArmy} />
         <button
           className="primary"
           disabled={busy || !name.trim()}
@@ -70,7 +80,7 @@ export function Welcome({
           Join game →
         </button>
         <small>
-          An account is optional. Use Account to keep your army when you switch
+          An account is optional. Use Settings to keep your armies when you switch
           devices. Your battle seat stays on this browser for seven days.
         </small>
       </div>

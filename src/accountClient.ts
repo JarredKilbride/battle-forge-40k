@@ -1,3 +1,4 @@
+import { armiesFrom, writeArmyLibrary } from "./armyLibrary";
 import type { Army } from "./army";
 import { load, save } from "./api";
 
@@ -8,6 +9,7 @@ export type AccountSession = {
 
 export type AccountResult = AccountSession & {
   army: Army | null;
+  armies: Army[];
 };
 
 const ACCOUNT_KEY = "bf.account";
@@ -38,7 +40,13 @@ async function accountRequest(body: Record<string, unknown>, token?: string) {
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(12000),
   });
-  let data: { error?: string; email?: string; token?: string; army?: Army | null };
+  let data: {
+    error?: string;
+    email?: string;
+    token?: string;
+    army?: Army | null;
+    armies?: unknown;
+  };
   try {
     data = await response.json();
   } catch {
@@ -61,13 +69,44 @@ export function loginAccount(email: string, password: string) {
 async function accountResult(body: Record<string, unknown>): Promise<AccountResult> {
   const data = await accountRequest(body);
   if (!data.email || !data.token) throw new Error("Could not sign in.");
-  return { email: data.email, token: data.token, army: data.army ?? null };
+  const armies = armiesFrom(data.armies);
+  if (armies.length) writeArmyLibrary(armies);
+  return { email: data.email, token: data.token, army: data.army ?? null, armies };
 }
 
 export async function saveAccountArmy(army: Army | null) {
   const session = readAccount();
   if (!session) return;
-  await accountRequest({ op: "save", email: session.email, army }, session.token);
+  const data = await accountRequest(
+    { op: "save", email: session.email, army },
+    session.token,
+  );
+  const armies = armiesFrom(data.armies);
+  if (data.armies) writeArmyLibrary(armies);
+}
+
+export async function changeAccountPassword(currentPassword: string, nextPassword: string) {
+  const session = readAccount();
+  if (!session) throw new Error("Sign in again.");
+  await accountRequest(
+    {
+      op: "password",
+      email: session.email,
+      password: currentPassword,
+      nextPassword,
+    },
+    session.token,
+  );
+}
+
+export async function deleteAccount(password: string) {
+  const session = readAccount();
+  if (!session) throw new Error("Sign in again.");
+  await accountRequest(
+    { op: "delete", email: session.email, password },
+    session.token,
+  );
+  writeAccount(null);
 }
 
 export async function logoutAccount() {

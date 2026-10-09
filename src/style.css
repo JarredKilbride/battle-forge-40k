@@ -363,6 +363,9 @@ main {
   color: var(--muted);
   border-style: dashed;
 }
+.army-choice small {
+  color: var(--muted);
+}
 .lobby > .primary {
   width: 100%;
   margin-top: 24px;
@@ -818,6 +821,25 @@ main {
 .profile-page {
   max-width: 760px;
   margin: auto;
+}
+.settings-page {
+  max-width: 640px;
+  margin: 28px auto;
+  display: grid;
+  gap: 16px;
+}
+.settings-page h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.settings-block {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #4b3338;
+}
+.settings-actions {
+  justify-content: flex-start;
 }
 .profile-page > .primary {
   width: 100%;

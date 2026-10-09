@@ -14,12 +14,14 @@ export type AccountRecord = {
   salt: string;
   sessions: string[];
   army: unknown;
+  armies: unknown[];
   updatedAt: number;
 };
 
 export interface AccountStore {
   get(key: string): Promise<{ data: AccountRecord; etag: string } | null>;
   put(key: string, data: AccountRecord, etag?: string): Promise<boolean>;
+  delete(key: string): Promise<void>;
 }
 
 type Attempt = { count: number; lockedUntil: number };
@@ -97,6 +99,42 @@ function whole(value: unknown, min: number, max: number) {
     "That army could not be saved.",
   );
   return value;
+}
+
+function libraryOf(record: { army: unknown; armies?: unknown }) {
+  const raw = Array.isArray(record.armies) ? record.armies : [];
+  const listed = raw.flatMap((item) => {
+    try {
+      const army = validateArmy(item);
+      return army ? [army] : [];
+    } catch {
+      return [];
+    }
+  });
+  if (listed.length) return listed.slice(-20);
+  try {
+    const current = validateArmy(record.army);
+    return current ? [current] : [];
+  } catch {
+    return [];
+  }
+}
+
+function keepArmy(list: unknown[], army: unknown) {
+  if (!army || typeof army !== "object") return list;
+  const name = String((army as { name?: unknown }).name ?? "")
+    .trim()
+    .toLowerCase();
+  if (!name) return list;
+  const rest = list.filter((item) => {
+    if (!item || typeof item !== "object") return true;
+    return (
+      String((item as { name?: unknown }).name ?? "")
+        .trim()
+        .toLowerCase() !== name
+    );
+  });
+  return [...rest, army].slice(-20);
 }
 
 function validateArmy(value: unknown): unknown {
@@ -212,10 +250,11 @@ export function createAccountHandler(store: AccountStore) {
           salt,
           sessions: [token],
           army: null,
+          armies: [],
           updatedAt: Date.now(),
         };
         ensure(await store.put(key, record), "An account with that email already exists.", 409);
-        return json({ email, token, army: null });
+        return json({ email, token, army: null, armies: [] });
       }
 
       if (body.op === "login") {
@@ -236,20 +275,28 @@ export function createAccountHandler(store: AccountStore) {
           sessions: [...found.data.sessions, token].slice(-8),
         };
         await writeAccount(store, key, found, next);
-        return json({ email, token, army: found.data.army });
+        return json({
+          email,
+          token,
+          army: found.data.army,
+          armies: libraryOf(found.data),
+        });
       }
 
       const token = tokenOf(req);
       const found = await store.get(key);
       ensure(found && found.data.sessions.includes(token), "Sign in again.", 401);
 
-      if (body.op === "read") return json({ email, army: found.data.army });
+      if (body.op === "read") {
+        return json({ email, army: found.data.army, armies: libraryOf(found.data) });
+      }
 
       if (body.op === "save") {
         const army = validateArmy(body.army);
-        const next = { ...found.data, army, updatedAt: Date.now() };
+        const armies = army ? keepArmy(libraryOf(found.data), army) : libraryOf(found.data);
+        const next = { ...found.data, army, armies, updatedAt: Date.now() };
         await writeAccount(store, key, found, next);
-        return json({ email, army });
+        return json({ email, army, armies });
       }
 
       if (body.op === "logout") {
@@ -258,7 +305,36 @@ export function createAccountHandler(store: AccountStore) {
           sessions: found.data.sessions.filter((session) => session !== token),
         };
         await writeAccount(store, key, found, next);
-        return json({ email, army: found.data.army });
+        return json({ email, army: found.data.army, armies: libraryOf(found.data) });
+      }
+
+      if (body.op === "password") {
+        const current = passwordOf(body.password);
+        const nextPassword = passwordOf(body.nextPassword);
+        const match = await hashesMatch(
+          found.data.passwordHash,
+          await passwordHash(current, found.data.salt),
+        );
+        if (!match) throw new GameError("Current password is wrong.", 401);
+        const salt = randomBytes(16).toString("hex");
+        await writeAccount(store, key, found, {
+          ...found.data,
+          salt,
+          passwordHash: await passwordHash(nextPassword, salt),
+          sessions: [token],
+        });
+        return json({ email, army: found.data.army, armies: libraryOf(found.data) });
+      }
+
+      if (body.op === "delete") {
+        const password = passwordOf(body.password);
+        const match = await hashesMatch(
+          found.data.passwordHash,
+          await passwordHash(password, found.data.salt),
+        );
+        if (!match) throw new GameError("Password is wrong.", 401);
+        await store.delete(key);
+        return json({ email, army: null, armies: [] });
       }
 
       throw new GameError("Unknown operation.");

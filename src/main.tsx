@@ -11,7 +11,6 @@ import {
 import { ArmyPanel } from "./ArmyPanel";
 import type { Army } from "./army";
 import {
-  AccountDialog,
   BattleGuide,
   ConfirmDialog,
   ErrorNotice,
@@ -19,6 +18,7 @@ import {
   HistoryView,
   Lobby,
   ProfilesView,
+  SettingsPage,
   TopBar,
   Welcome,
 } from "./components";
@@ -30,7 +30,7 @@ import "./style.css";
 function App() {
   const [blood, setBlood] = useState(readBloodMotion);
   const [account, setAccount] = useState<AccountSession | null>(readAccount);
-  const [accountOpen, setAccountOpen] = useState(false);
+  const [settings, setSettings] = useState(false);
   const [savedArmy, setSavedArmy] = useState<Army | null>(null);
   const {
     session,
@@ -50,6 +50,9 @@ function App() {
     setProfile,
     profiles,
     army,
+    armies,
+    selectArmy,
+    replaceArmies,
     armyPick,
     armyUnit,
     setArmyUnit,
@@ -91,6 +94,7 @@ function App() {
 
   function signedIn(result: AccountResult) {
     remember({ email: result.email, token: result.token });
+    if (result.armies.length) replaceArmies(result.armies);
     if (result.army && army && !sameArmy(result.army, army)) {
       setSavedArmy(result.army);
       return;
@@ -101,7 +105,6 @@ function App() {
         setError(caught instanceof Error ? caught.message : "Could not save your army."),
       );
     }
-    setAccountOpen(false);
   }
 
   return (
@@ -111,13 +114,16 @@ function App() {
         online={online}
         lastSync={lastSync}
         blood={blood}
-        accountLabel={account?.email ?? "Account"}
+        accountLabel="Settings"
         onBlood={(enabled) => {
           setBlood(enabled);
           writeBloodMotion(enabled);
         }}
-        onAccount={() => setAccountOpen(true)}
-        onHome={() => setView("battle")}
+        onAccount={() => setSettings(true)}
+        onHome={() => {
+          setSettings(false);
+          setView("battle");
+        }}
       />
       <main>
         {error && (
@@ -129,13 +135,50 @@ function App() {
             onDismiss={() => setError("")}
           />
         )}
-        {!session ? (
+        {settings ? (
+          <SettingsPage
+            account={account}
+            armyLabel={
+              army
+                ? `${army.name} is on this device and saves to this account.`
+                : "No army is on this device yet."
+            }
+            army={army}
+            armies={armies}
+            conflict={savedArmy !== null}
+            onBack={() => setSettings(false)}
+            onSignedIn={signedIn}
+            onSignedOut={() => {
+              remember(null);
+              setSavedArmy(null);
+            }}
+            onUseSaved={() => {
+              if (savedArmy) storeArmy(savedArmy);
+              setSavedArmy(null);
+            }}
+            onSelectArmy={selectArmy}
+            onArmy={storeArmy}
+            onKeepDevice={() => {
+              if (army) {
+                void saveAccountArmy(army).catch((caught) =>
+                  setError(
+                    caught instanceof Error ? caught.message : "Could not save your army.",
+                  ),
+                );
+              }
+              setSavedArmy(null);
+            }}
+          />
+        ) : !session ? (
           <Welcome
             name={name}
             code={code}
             busy={busy}
+            army={army}
+            armies={armies}
             onName={setName}
             onCode={setCode}
+            onSelectArmy={selectArmy}
             onCreate={() => enter("create")}
             onJoin={() => enter("join")}
           />
@@ -152,6 +195,7 @@ function App() {
             game={game}
             meId={session.playerId}
             army={army}
+            armies={armies}
             isHost={session.playerId === game.host}
             first={first}
             disabled={disabled}
@@ -172,6 +216,7 @@ function App() {
             }
             onLeave={() => setConfirm("leave")}
             onArmy={storeArmy}
+            onSelectArmy={selectArmy}
           />
         ) : (
           <GameShell
@@ -267,38 +312,6 @@ function App() {
         Check current mission, army rules and updates. Not affiliated with Games
         Workshop.
       </footer>
-      {accountOpen && (
-        <AccountDialog
-          account={account}
-          conflict={savedArmy !== null}
-          onClose={() => {
-            setAccountOpen(false);
-            setSavedArmy(null);
-          }}
-          onSignedIn={signedIn}
-          onSignedOut={() => {
-            remember(null);
-            setSavedArmy(null);
-            setAccountOpen(false);
-          }}
-          onUseSaved={() => {
-            if (savedArmy) storeArmy(savedArmy);
-            setSavedArmy(null);
-            setAccountOpen(false);
-          }}
-          onKeepDevice={() => {
-            if (army) {
-              void saveAccountArmy(army).catch((caught) =>
-                setError(
-                  caught instanceof Error ? caught.message : "Could not save your army.",
-                ),
-              );
-            }
-            setSavedArmy(null);
-            setAccountOpen(false);
-          }}
-        />
-      )}
       {confirm && (
         <ConfirmDialog
           kind={confirm}

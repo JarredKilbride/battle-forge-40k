@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { createServer as createVite } from "vite";
 import {
   createAccountHandler,
@@ -37,6 +37,11 @@ function jsonStore<T>(directory: string) {
       });
       queue = task.catch(() => {});
       return task;
+    },
+    async delete(key: string) {
+      await unlink(`${directory}/${key}.json`).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== "ENOENT") throw error;
+      });
     },
   };
   return store;

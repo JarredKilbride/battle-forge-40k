@@ -20,6 +20,9 @@ function memoryStore(): AccountStore {
       rows.set(key, { data, etag: crypto.randomUUID() });
       return true;
     },
+    async delete(key) {
+      rows.delete(key);
+    },
   };
 }
 
@@ -139,6 +142,61 @@ test("an imported Sisters roster can be saved", async () => {
   const body = (await saved.json()) as { error?: string; army?: { units: unknown[] } };
   assert.equal(saved.status, 200, body.error);
   assert.equal(body.army?.units.length, army.units.length);
+});
+
+test("a password change keeps the army and delete removes the account", async () => {
+  const handler = createAccountHandler(memoryStore());
+  const created = await post(handler, {
+    op: "register",
+    email: "keep@b.co",
+    password: "tabletop-1",
+  });
+  const { token, email } = (await created.json()) as { token: string; email: string };
+  const saved = await post(handler, { op: "save", email, army }, token);
+  assert.equal(saved.status, 200);
+  const wrong = await post(
+    handler,
+    { op: "password", email, password: "nope-nope", nextPassword: "tabletop-2" },
+    token,
+  );
+  assert.equal(wrong.status, 401);
+  const changed = await post(
+    handler,
+    { op: "password", email, password: "tabletop-1", nextPassword: "tabletop-2" },
+    token,
+  );
+  assert.equal(changed.status, 200);
+  const again = await post(handler, {
+    op: "login",
+    email,
+    password: "tabletop-2",
+  });
+  const signed = (await again.json()) as { army: { name: string } };
+  assert.equal(signed.army.name, "Sisters");
+  const removed = await post(handler, { op: "delete", email, password: "tabletop-2" }, token);
+  assert.equal(removed.status, 200);
+  const gone = await post(handler, { op: "login", email, password: "tabletop-2" });
+  assert.equal(gone.status, 401);
+});
+
+test("a second roster stays beside the first", async () => {
+  const handler = createAccountHandler(memoryStore());
+  const created = await post(handler, {
+    op: "register",
+    email: "lists@b.co",
+    password: "tabletop-1",
+  });
+  const { token, email } = (await created.json()) as { token: string; email: string };
+  await post(handler, { op: "save", email, army }, token);
+  const second = { ...army, name: "Second host", points: 500 };
+  const saved = await post(handler, { op: "save", email, army: second }, token);
+  const body = (await saved.json()) as { army: { name: string }; armies: { name: string }[] };
+  assert.equal(saved.status, 200);
+  assert.equal(body.army.name, "Second host");
+  assert.deepEqual(
+    body.armies.map((entry) => entry.name),
+    ["Sisters", "Second host"],
+  );
 });
 
 test("sign out removes that session", async () => {
