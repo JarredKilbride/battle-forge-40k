@@ -28,6 +28,11 @@ export async function request(
 }
 export const readGame = (s: Session) =>
   request(s.token, { op: "read", code: s.code });
+export function watchGame(code: string): Promise<Game> {
+  return request(crypto.randomUUID(), { op: "watch", code }).then(
+    (result) => result.game,
+  );
+}
 export const sendAction = (
   s: Session,
   version: number,

@@ -23,7 +23,6 @@ export function GameShell({
   disabled,
   onView,
   onScore,
-  onUndoAnswer,
   onLeave,
   onEnd,
   children,
@@ -38,7 +37,6 @@ export function GameShell({
   disabled: boolean;
   onView: (view: GameView) => void;
   onScore: (stat: "cp" | "vp", value: number) => void;
-  onUndoAnswer: (accept: boolean) => void;
   onLeave: () => void;
   onEnd: () => void;
   children: ReactNode;
@@ -72,24 +70,6 @@ export function GameShell({
         ended={game.status === "ended"}
         onScore={onScore}
       />
-      {game.undo && (
-        <div className="notice">
-          <strong>Undo requested</strong>
-          <p>{game.undo.label}</p>
-          {game.undo.by !== meId || game.players.length === 1 ? (
-            <div className="actions">
-              <button disabled={disabled} onClick={() => onUndoAnswer(true)}>
-                Approve undo
-              </button>
-              <button disabled={disabled} onClick={() => onUndoAnswer(false)}>
-                Keep action
-              </button>
-            </div>
-          ) : (
-            <p>Waiting for your opponent’s approval.</p>
-          )}
-        </div>
-      )}
       <nav className="tabs" aria-label="Game views">
         {(["battle", "profiles", "army", "codex", "history"] as const).map((v) => (
           <button

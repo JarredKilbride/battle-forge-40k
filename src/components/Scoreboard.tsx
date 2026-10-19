@@ -6,6 +6,7 @@ export function Scoreboard({
   meId,
   disabled,
   ended,
+  readOnly = false,
   onScore,
 }: {
   players: Player[];
@@ -13,6 +14,7 @@ export function Scoreboard({
   meId: string | undefined;
   disabled: boolean;
   ended: boolean;
+  readOnly?: boolean;
   onScore: (stat: "cp" | "vp", value: number) => void;
 }) {
   return (
@@ -23,27 +25,41 @@ export function Scoreboard({
           key={p.id}
         >
           <div>
-            <small>{p.id === meId ? "YOU" : "OPPONENT"}</small>
+            <small>
+              {readOnly
+                ? p.id === activeId
+                  ? "ACTIVE"
+                  : "PLAYER"
+                : p.id === meId
+                  ? "YOU"
+                  : "OPPONENT"}
+            </small>
             <h3>{p.name}</h3>
           </div>
           {(["cp", "vp"] as const).map((stat) => (
             <div className="counter" key={stat}>
               <span>{stat.toUpperCase()}</span>
-              <button
-                aria-label={`Decrease ${p.name} ${stat}`}
-                disabled={disabled || p.id !== meId || p[stat] === 0 || ended}
-                onClick={() => onScore(stat, p[stat] - 1)}
-              >
-                −
-              </button>
-              <strong>{p[stat]}</strong>
-              <button
-                aria-label={`Increase ${p.name} ${stat}`}
-                disabled={disabled || p.id !== meId || ended}
-                onClick={() => onScore(stat, p[stat] + 1)}
-              >
-                +
-              </button>
+              {readOnly ? (
+                <strong className="ref-score">{p[stat]}</strong>
+              ) : (
+                <>
+                  <button
+                    aria-label={`Decrease ${p.name} ${stat}`}
+                    disabled={disabled || p.id !== meId || p[stat] === 0 || ended}
+                    onClick={() => onScore(stat, p[stat] - 1)}
+                  >
+                    −
+                  </button>
+                  <strong>{p[stat]}</strong>
+                  <button
+                    aria-label={`Increase ${p.name} ${stat}`}
+                    disabled={disabled || p.id !== meId || ended}
+                    onClick={() => onScore(stat, p[stat] + 1)}
+                  >
+                    +
+                  </button>
+                </>
+              )}
             </div>
           ))}
         </section>

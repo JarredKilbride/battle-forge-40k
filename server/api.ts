@@ -15,6 +15,7 @@ export function createHandler(store:Store){return async (req:Request)=>{
   ensure(typeof b.code==='string'&&/^[A-F0-9]{10}$/.test(b.code),'Enter the 10-character room code.');
   const found=await store.get(b.code);ensure(found,'Room not found. Check the code.',404);const game=found.data;ensure(game.expiresAt>Date.now(),'This room has expired. Create a new game.',410);
   if(b.op==='join'){const old=game.version;const id=join(game,b.name,token);if(game.version!==old)ensure(await store.put(b.code,game,found.etag),'Someone else joined. Try again.',409);return json({game:publicGame(game),playerId:id});}
+  if(b.op==='watch')return json({game:publicGame(game)});
   const id=authenticate(game,token);
   if(b.op==='read')return json({game:publicGame(game),playerId:id});
   ensure(b.op==='act','Unknown operation.');ensure(typeof b.requestId==='string'&&/^[a-f0-9-]{36}$/i.test(b.requestId),'Invalid action identifier.');

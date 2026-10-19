@@ -51,20 +51,36 @@ test('a solo test lets the only player resolve hits, saves, damage, and undo', (
 
   apply(game, id, { type: 'note', text: 'Solo marker' });
   apply(game, id, { type: 'undo-request' });
-  apply(game, id, { type: 'undo-answer', accept: true });
   assert.equal(game.undo, null);
-  assert.match(game.history.at(-1)?.text ?? '', /approved undo/);
+  assert.equal(game.phase, 2);
+  assert.match(game.history.at(-1)?.text ?? '', /undid the last action/);
   assert.equal(game.history.some(entry => entry.text === 'Tester: Solo marker'), true);
 });
 
-test('two players still need the other seat to answer undo', () => {
-  const game = createGame('SOLOTEST03', 'Host', 'token-1');
+test('each player gains 1 CP when their turn starts', () => {
+  const game = createGame('CPTEST0001', 'Host', 'token-1');
   const opponent = join(game, 'Opponent', 'token-2');
   apply(game, game.host, { type: 'start', first: game.host });
-  apply(game, game.host, { type: 'note', text: 'Keep this' });
+  assert.equal(game.players.find(player => player.id === game.host)?.cp, 1);
+  assert.equal(game.players.find(player => player.id === opponent)?.cp, 0);
+  for (let step = 0; step < 5; step += 1) apply(game, game.host, { type: 'next' });
+  assert.equal(game.phase, 0);
+  assert.equal(game.order[game.turn], opponent);
+  assert.equal(game.players.find(player => player.id === opponent)?.cp, 1);
+  assert.equal(game.players.find(player => player.id === game.host)?.cp, 1);
   apply(game, game.host, { type: 'undo-request' });
-  assert.throws(() => apply(game, game.host, { type: 'undo-answer', accept: true }), GameError);
-  apply(game, opponent, { type: 'undo-answer', accept: false });
+  assert.equal(game.players.find(player => player.id === opponent)?.cp, 0);
+});
+
+test('undo restores the last action without the other player', () => {
+  const game = createGame('SOLOTEST03', 'Host', 'token-1');
+  join(game, 'Opponent', 'token-2');
+  apply(game, game.host, { type: 'start', first: game.host });
+  apply(game, game.host, { type: 'next' });
+  assert.equal(game.phase, 1);
+  apply(game, game.host, { type: 'undo-request' });
+  assert.equal(game.phase, 0);
   assert.equal(game.undo, null);
-  assert.equal(game.attack, null);
+  assert.equal(game.players.length, 2);
+  assert.match(game.history.at(-1)?.text ?? '', /Host undid the last action/);
 });

@@ -34,7 +34,7 @@ export function ConfirmDialog({
           {kind === "leave"
             ? "This removes your saved seat from this browser. You cannot reclaim a full room with its code alone."
             : kind === "end"
-              ? "Both players will see the final score. You can request an agreed undo from history."
+              ? "Both players will see the final score. You can undo the last action from history."
               : "Make sure all units, abilities and scoring for this step are resolved. This moves the shared game forward."}
         </p>
         <div className="actions">

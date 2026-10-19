@@ -7,11 +7,11 @@ export const guidance = [
     intro: "Resolve turn-start effects, then command your army.",
     tasks: [
       "Turn-start and phase-start effects",
-      "Each player adds 1 CP",
+      "1 CP added for the active player",
       "Battle-shock checks",
       "Command abilities and mission scoring",
     ],
-    help: "Both players gain one CP. Test units already battle-shocked or at/below half-strength. Then resolve Command abilities and end-of-phase effects. Update CP yourself below.",
+    help: "The active player gains 1 CP when their turn starts. Use the score controls to spend CP or correct it. Test units already battle-shocked or at/below half-strength, then resolve Command abilities and end-of-phase effects.",
     page: 30,
   },
   {

@@ -18,6 +18,7 @@ import {
   HistoryView,
   Lobby,
   ProfilesView,
+  RefereeView,
   SettingsPage,
   TopBar,
   UnitCodex,
@@ -33,6 +34,7 @@ function App() {
   const [account, setAccount] = useState<AccountSession | null>(readAccount);
   const [settings, setSettings] = useState(false);
   const [codex, setCodex] = useState(false);
+  const [referee, setReferee] = useState("");
   const [savedArmy, setSavedArmy] = useState<Army | null>(null);
   const {
     session,
@@ -126,6 +128,7 @@ function App() {
         onHome={() => {
           setSettings(false);
           setCodex(false);
+          setReferee("");
           setView("battle");
         }}
       />
@@ -174,6 +177,8 @@ function App() {
               setSavedArmy(null);
             }}
           />
+        ) : referee && !session ? (
+          <RefereeView code={referee} onBack={() => setReferee("")} />
         ) : codex && !session ? (
           <UnitCodex onBack={() => setCodex(false)} onSaveArmy={storeArmy} />
         ) : !session ? (
@@ -189,6 +194,7 @@ function App() {
             onDeleteArmy={deleteArmy}
             onCreate={() => enter("create")}
             onJoin={() => enter("join")}
+            onWatch={() => setReferee(code.trim().toUpperCase())}
             onCodex={() => setCodex(true)}
           />
         ) : !game ? (
@@ -240,7 +246,6 @@ function App() {
             disabled={disabled}
             onView={setView}
             onScore={(stat, value) => act({ type: "score", stat, value })}
-            onUndoAnswer={(accept) => act({ type: "undo-answer", accept })}
             onLeave={() => setConfirm("leave")}
             onEnd={() => setConfirm("end")}
           >

@@ -8,6 +8,7 @@ export { GameShell, type GameView } from "./GameShell";
 export { HistoryView } from "./HistoryView";
 export { Lobby } from "./Lobby";
 export { ProfilesView } from "./ProfilesView";
+export { RefereeView } from "./RefereeView";
 export { SettingsPage } from "./SettingsPage";
 export { TopBar } from "./TopBar";
 export { UnitCodex } from "./UnitCodex";

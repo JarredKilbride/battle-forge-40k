@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { codexToArmyUnit, draftArmy, markedSkill } from "../src/codexArmy.ts";
+import { codexToArmyUnit, draftArmy, markedSkill, pointsLimit } from "../src/codexArmy.ts";
 import type { CodexUnit } from "../src/codex.ts";
 
 const prosecutors: CodexUnit = {
@@ -110,4 +110,14 @@ test("a draft army adds the unit costs", () => {
   assert.equal(army.points, 100);
   assert.equal(army.limit, 2000);
   assert.equal(army.units.length, 2);
+});
+
+test("a points limit can be any whole number up to the save cap", () => {
+  assert.equal(pointsLimit(1500), 1500);
+  assert.equal(pointsLimit("500"), 500);
+  assert.equal(pointsLimit(20000), 20000);
+  assert.equal(pointsLimit(0), 2000);
+  assert.equal(pointsLimit(20001), 2000);
+  assert.equal(pointsLimit("15.5"), 2000);
+  assert.equal(pointsLimit(""), 2000);
 });

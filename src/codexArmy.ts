@@ -32,6 +32,15 @@ export function codexToArmyUnit(unit: CodexUnit, pointsIndex: number): ArmyUnit 
   };
 }
 
+export const POINT_PRESETS = [1000, 2000, 3000];
+export const POINTS_CAP = 20000;
+
+export function pointsLimit(value: unknown, fallback = 2000): number {
+  const amount = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(amount) || amount < 1 || amount > POINTS_CAP) return fallback;
+  return amount;
+}
+
 export function draftArmy(
   name: string,
   faction: string,

@@ -13,6 +13,7 @@ export function Welcome({
   onDeleteArmy,
   onCreate,
   onJoin,
+  onWatch,
   onCodex,
 }: {
   name: string;
@@ -26,6 +27,7 @@ export function Welcome({
   onDeleteArmy: (name: string) => void;
   onCreate: () => void;
   onJoin: () => void;
+  onWatch: () => void;
   onCodex: () => void;
 }) {
   return (
@@ -87,6 +89,9 @@ export function Welcome({
         </label>
         <button disabled={busy || !name.trim() || code.length !== 10} onClick={onJoin}>
           Join game →
+        </button>
+        <button type="button" disabled={busy || code.length !== 10} onClick={onWatch}>
+          Watch as referee
         </button>
         <button type="button" className="quiet" onClick={onCodex}>
           Look up a unit

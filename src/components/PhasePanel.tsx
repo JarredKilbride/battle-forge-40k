@@ -51,8 +51,8 @@ export function PhasePanel({
       <Help title="Special rule or a mistake?">
         <p>
           Use your mission and current army rules for exceptions. Scores are
-          manual. Record an agreed exception in history, or request undo and
-          have your opponent approve it.
+          manual. Record an agreed exception in history, or undo the last
+          action.
         </p>
       </Help>
       <button

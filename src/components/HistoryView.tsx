@@ -24,8 +24,8 @@ export function HistoryView({
           <p className="eyebrow">SHARED RECORD</p>
           <h2>Action history</h2>
         </div>
-        <button disabled={disabled || !game.canUndo || !!game.undo} onClick={onUndo}>
-          Request undo
+        <button disabled={disabled || !game.canUndo} onClick={onUndo}>
+          Undo last action
         </button>
       </div>
       <form
@@ -73,8 +73,8 @@ export function HistoryView({
         ))}
       </ol>
       <small>
-        Last 250 actions retained. Undo restores the latest action’s game state
-        without hiding its history.
+        Last 250 actions retained. Undo restores the latest action immediately.
+        The history line stays.
       </small>
     </section>
   );

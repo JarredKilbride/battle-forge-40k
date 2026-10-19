@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { Army, ArmyUnit } from "../army";
-import { codexToArmyUnit, draftArmy } from "../codexArmy";
+import { POINT_PRESETS, codexToArmyUnit, draftArmy, pointsLimit } from "../codexArmy";
 import {
   groupRules,
   searchUnits,
@@ -11,9 +11,9 @@ import {
   type CodexWeapon,
   type UnitDetail,
 } from "../codex";
+import { explainWeaponRule, splitWeaponRules } from "../weaponRules";
 
 const DRAFT_KEY = "bf.codex-draft";
-const LIMITS = [1000, 2000, 3000];
 
 type Draft = { name: string; faction: string; limit: number; units: ArmyUnit[] };
 
@@ -368,7 +368,10 @@ function WeaponTable({
               <th>S</th>
               <th>AP</th>
               <th>D</th>
-              <th>Rules</th>
+              <th>
+                Rules
+                <span className="rule-hint">click to explain</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -381,7 +384,9 @@ function WeaponTable({
                 <td>{weapon.strength || "—"}</td>
                 <td>{weapon.ap || "—"}</td>
                 <td>{weapon.damage || "—"}</td>
-                <td className="rules">{weapon.rules || "—"}</td>
+                <td className="rules">
+                  <WeaponRules text={weapon.rules} weapon={weapon.name} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -421,19 +426,10 @@ function ArmyTray({
           onChange={(event) => onDraft({ ...draft, name: event.target.value })}
         />
       </label>
-      <label className="field">
-        Points limit
-        <select
-          value={draft.limit}
-          onChange={(event) => onDraft({ ...draft, limit: Number(event.target.value) })}
-        >
-          {LIMITS.map((limit) => (
-            <option key={limit} value={limit}>
-              {limit}
-            </option>
-          ))}
-        </select>
-      </label>
+      <PointsLimit
+        limit={draft.limit}
+        onChange={(limit) => onDraft({ ...draft, limit })}
+      />
       <p className={spent > draft.limit ? "codex-over" : "codex-meta"}>
         {spent} / {draft.limit} pts
         {draft.faction ? ` · ${draft.faction}` : ""}
@@ -491,6 +487,101 @@ function ArmyTray({
   );
 }
 
+function PointsLimit({ limit, onChange }: { limit: number; onChange: (limit: number) => void }) {
+  const [text, setText] = useState(String(limit));
+  useEffect(() => {
+    setText(String(limit));
+  }, [limit]);
+  return (
+    <>
+      <label className="field">
+        Points limit
+        <input
+          inputMode="numeric"
+          value={text}
+          onChange={(event) => {
+            const next = event.target.value.replace(/\D/g, "");
+            setText(next);
+            const amount = pointsLimit(next, 0);
+            if (amount > 0) onChange(amount);
+          }}
+          onBlur={() => setText(String(limit))}
+        />
+      </label>
+      <div className="point-presets" role="group" aria-label="Common points limits">
+        {POINT_PRESETS.map((preset) => (
+          <button
+            key={preset}
+            type="button"
+            className="point-preset"
+            aria-pressed={limit === preset}
+            onClick={() => onChange(preset)}
+          >
+            {preset}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function WeaponRules({ text, weapon }: { text: string; weapon: string }) {
+  const parts = splitWeaponRules(text);
+  const [open, setOpen] = useState<number | null>(null);
+  const titleId = useId();
+  const note = open === null ? null : explainWeaponRule(parts[open] ?? "");
+  useEffect(() => {
+    if (!note) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [note]);
+  if (!parts.length) return <>—</>;
+  return (
+    <div className="weapon-rules">
+      {parts.map((part, index) => {
+        const selected = open === index;
+        return (
+          <button
+            key={`${part}-${index}`}
+            type="button"
+            className="rule-chip"
+            aria-expanded={selected}
+            onClick={() => setOpen(selected ? null : index)}
+          >
+            {part}
+          </button>
+        );
+      })}
+      {note && (
+        <div className="modal-backdrop" onClick={() => setOpen(null)}>
+          <section
+            className="modal panel rule-popup"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="eyebrow">{weapon}</p>
+            <h2 id={titleId}>{note.title}</h2>
+            <p>{note.text}</p>
+            {note.shared && (
+              <p className="rule-note-source">Short reminder of the ability printed on these datasheets.</p>
+            )}
+            <div className="actions">
+              <button type="button" autoFocus onClick={() => setOpen(null)}>
+                Close
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function rangedWeapons(weapons: CodexWeapon[]) {
   return weapons.filter((weapon) => !isMelee(weapon));
 }
@@ -518,7 +609,7 @@ function readDraft(): Draft {
     return {
       name: typeof value.name === "string" ? value.name : "",
       faction: typeof value.faction === "string" ? value.faction : "",
-      limit: LIMITS.includes(Number(value.limit)) ? Number(value.limit) : 2000,
+      limit: pointsLimit(value.limit),
       units: value.units.filter(
         (unit) => unit && typeof unit.name === "string" && Array.isArray(unit.models),
       ),
