@@ -2,12 +2,13 @@ import type { ReactNode } from "react";
 import type { Game } from "../types";
 import { Scoreboard } from "./Scoreboard";
 
-export type GameView = "battle" | "profiles" | "history" | "army";
+export type GameView = "battle" | "profiles" | "history" | "army" | "codex";
 
 const VIEW_LABEL: Record<GameView, string> = {
   battle: "Battle guide",
   profiles: "Weapon profiles",
   army: "Army",
+  codex: "Unit codex",
   history: "Action history",
 };
 
@@ -90,7 +91,7 @@ export function GameShell({
         </div>
       )}
       <nav className="tabs" aria-label="Game views">
-        {(["battle", "profiles", "army", "history"] as const).map((v) => (
+        {(["battle", "profiles", "army", "codex", "history"] as const).map((v) => (
           <button
             key={v}
             aria-current={view === v ? "page" : undefined}

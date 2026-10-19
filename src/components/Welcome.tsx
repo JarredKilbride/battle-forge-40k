@@ -13,6 +13,7 @@ export function Welcome({
   onDeleteArmy,
   onCreate,
   onJoin,
+  onCodex,
 }: {
   name: string;
   code: string;
@@ -25,6 +26,7 @@ export function Welcome({
   onDeleteArmy: (name: string) => void;
   onCreate: () => void;
   onJoin: () => void;
+  onCodex: () => void;
 }) {
   return (
     <section className="welcome">
@@ -85,6 +87,9 @@ export function Welcome({
         </label>
         <button disabled={busy || !name.trim() || code.length !== 10} onClick={onJoin}>
           Join game →
+        </button>
+        <button type="button" className="quiet" onClick={onCodex}>
+          Look up a unit
         </button>
         <small>
           An account is optional. Use Settings to keep your armies when you switch

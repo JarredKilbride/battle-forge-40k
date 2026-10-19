@@ -20,6 +20,7 @@ import {
   ProfilesView,
   SettingsPage,
   TopBar,
+  UnitCodex,
   Welcome,
 } from "./components";
 import { readBloodMotion, writeBloodMotion } from "./bloodMotion";
@@ -31,6 +32,7 @@ function App() {
   const [blood, setBlood] = useState(readBloodMotion);
   const [account, setAccount] = useState<AccountSession | null>(readAccount);
   const [settings, setSettings] = useState(false);
+  const [codex, setCodex] = useState(false);
   const [savedArmy, setSavedArmy] = useState<Army | null>(null);
   const {
     session,
@@ -123,6 +125,7 @@ function App() {
         onAccount={() => setSettings(true)}
         onHome={() => {
           setSettings(false);
+          setCodex(false);
           setView("battle");
         }}
       />
@@ -171,6 +174,8 @@ function App() {
               setSavedArmy(null);
             }}
           />
+        ) : codex && !session ? (
+          <UnitCodex onBack={() => setCodex(false)} onSaveArmy={storeArmy} />
         ) : !session ? (
           <Welcome
             name={name}
@@ -184,6 +189,7 @@ function App() {
             onDeleteArmy={deleteArmy}
             onCreate={() => enter("create")}
             onJoin={() => enter("join")}
+            onCodex={() => setCodex(true)}
           />
         ) : !game ? (
           <section className="panel loading">
@@ -291,6 +297,7 @@ function App() {
                 onRemove={removeProfile}
               />
             )}
+            {view === "codex" && <UnitCodex onSaveArmy={storeArmy} />}
             {view === "history" && (
               <HistoryView
                 game={game}
@@ -311,6 +318,10 @@ function App() {
         Unofficial fan companion · Core guide: June 2026 ·{" "}
         <a href={rulesUrl} target="_blank" rel="noreferrer">
           Official rules
+        </a>
+        {" · "}
+        <a href="https://wahapedia.ru/" target="_blank" rel="noreferrer">
+          Unit data powered by Wahapedia
         </a>
         <br />
         Check current mission, army rules and updates. Not affiliated with Games

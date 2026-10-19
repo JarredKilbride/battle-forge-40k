@@ -449,6 +449,7 @@ main {
 }
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   border-bottom: 1px solid #684540;
   gap: 8px;
   margin-bottom: 24px;
@@ -1328,5 +1329,122 @@ footer {
   }
   .army-stats span {
     flex: 1 1 auto;
+  }
+  .codex {
+    grid-template-columns: 1fr;
+  }
+}
+
+.codex {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(240px, 300px);
+  gap: 24px;
+  align-items: start;
+}
+.codex-search,
+.codex-sheet {
+  display: grid;
+  gap: 14px;
+}
+.codex-search h1,
+.codex-sheet h2 {
+  margin: 0;
+}
+.codex-hits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  max-height: 520px;
+  overflow: auto;
+}
+.codex-hits button {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 4px;
+}
+.codex-hits button span,
+.codex-meta,
+.codex-weapons span,
+.codex-sheet h3 span {
+  color: var(--muted);
+  font-weight: 500;
+}
+.codex-hits [aria-current="true"] {
+  border-color: var(--gold);
+}
+.codex-models,
+.codex-weapons,
+.codex-rules {
+  display: grid;
+  gap: 10px;
+}
+.codex-text {
+  white-space: pre-wrap;
+  margin: 6px 0 0;
+}
+.codex-list {
+  margin: 0;
+  padding-left: 18px;
+}
+.codex-block {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #3d2a30;
+}
+.codex-rules {
+  border: 1px solid #654b44;
+  border-radius: 3px;
+  padding: 8px 12px;
+}
+.codex-rules summary {
+  cursor: pointer;
+  color: #dbc093;
+}
+.codex-table-wrap {
+  overflow-x: auto;
+}
+.codex-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.codex-table th,
+.codex-table td {
+  border: 1px solid #654b44;
+  padding: 8px 10px;
+  text-align: center;
+  background: #120c0e;
+}
+.codex-table th {
+  background: #2a161c;
+  color: #dbc093;
+  letter-spacing: 0.04em;
+}
+.codex-table td:first-child,
+.codex-table th:first-child,
+.codex-table td.rules {
+  text-align: left;
+  white-space: normal;
+}
+.codex-table td.rules {
+  color: var(--muted);
+}
+.codex-add,
+.codex-army {
+  display: grid;
+  gap: 12px;
+}
+.codex-army h2 {
+  margin: 0;
+}
+.codex-over {
+  color: #e7a0a8;
+  margin: 0;
+}
+@media (max-width: 1100px) {
+  .codex {
+    grid-template-columns: 1fr;
   }
 }

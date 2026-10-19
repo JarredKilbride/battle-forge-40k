@@ -10,5 +10,6 @@ export { Lobby } from "./Lobby";
 export { ProfilesView } from "./ProfilesView";
 export { SettingsPage } from "./SettingsPage";
 export { TopBar } from "./TopBar";
+export { UnitCodex } from "./UnitCodex";
 export { Welcome } from "./Welcome";
 export { WoundBar } from "./WoundBar";
